@@ -17,7 +17,6 @@ async function bootstrap(): Promise<void> {
   const log = new Logger('FXR');
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['log', 'warn', 'error'],
-    rawBody: true, // the optional webhook signs the exact bytes
   });
 
   app.set('trust proxy', 1); // Railway's edge proxy: req.ip is the real client (rate limits)
@@ -64,12 +63,12 @@ async function bootstrap(): Promise<void> {
   });
 
   // 2) API hygiene: nothing cached, and state-changing calls must come from our own pages (CSRF defence on top of
-  //    SameSite=Strict cookies). The loader and the optional webhook carry no cookies and have their own checks.
+  //    SameSite=Strict cookies). The loader and payment notifications carry no cookies and have their own checks.
   app.use((req: Request, res: Response, next: NextFunction) => {
     if (!req.path.startsWith('/api/')) return next();
     res.set('Cache-Control', 'no-store');
     if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
-    if (req.path.startsWith('/api/loader/') || req.path.startsWith('/api/webhook/')) return next();
+    if (req.path.startsWith('/api/loader/') || req.path.startsWith('/api/payments/')) return next();
     const origin = req.get('origin');
     if (origin === cfg.origin) return next();
     if (!origin && req.get('sec-fetch-site') === 'same-origin') return next();
@@ -98,7 +97,8 @@ async function bootstrap(): Promise<void> {
   await app.listen(cfg.port, '0.0.0.0');
   log.log(`FXR web listening on :${cfg.port} (production=${cfg.production})`);
   if (!cfg.production) log.warn(`DEV MODE — panel at ${cfg.publicUrl}${panelPage}`);
-  if (!cfg.payAddress) log.warn('PAY_ADDRESS is not set: checkout is closed');
+  if (!cfg.nowpayments.apiKey) log.warn('NOWPAYMENTS_API_KEY is not set: checkout is closed');
+  if (!cfg.bot.token) log.warn('DISCORD_BOT_TOKEN is not set: Discord roles are not synced');
   if (!cfg.discord.clientId) log.warn('DISCORD_CLIENT_ID is not set: sign-in is disabled');
 }
 

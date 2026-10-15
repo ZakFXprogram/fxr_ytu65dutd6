@@ -5,6 +5,14 @@ import { join } from 'node:path';
 import { randomBytes } from 'node:crypto';
 import { CONFIG, type AppConfig } from '../config';
 
+export interface EventRow {
+  id: number;
+  ts_ms: number;
+  kind: string;
+  text: string;
+  user_id: string | null;
+}
+
 /**
  * Thin SQLite layer (node:sqlite, no native build). One file on the Railway volume. WAL mode so a reader
  * never blocks a writer. All access goes through typed helpers; statements are always parameterised.
@@ -20,6 +28,7 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
     this.db = new DatabaseSync(join(this.cfg.dataDir, 'fxr.sqlite'));
     this.db.exec('PRAGMA journal_mode = WAL;');
     this.db.exec('PRAGMA foreign_keys = ON;');
+    this.db.exec('PRAGMA busy_timeout = 3000;');
     this.migrate();
   }
 
@@ -80,13 +89,13 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
       );
       CREATE INDEX IF NOT EXISTS idx_sess_user ON sessions(user_id);
 
-      -- USDT orders. txid is UNIQUE so one payment can never be claimed twice.
+      -- Orders. Payment is collected by NOWPayments; status follows their notifications (double-checked).
       CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id),
         plan TEXT NOT NULL,
         amount TEXT NOT NULL,
-        pay_to TEXT NOT NULL,
+        pay_to TEXT NOT NULL DEFAULT '',
         status TEXT NOT NULL,
         txid TEXT UNIQUE,
         licence_id TEXT,
@@ -100,10 +109,40 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
       );
       CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
       CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
+
+      -- Redeem keys: single-use activation codes (giveaways, resellers). Stored hashed; the last 4 chars help
+      -- the owner recognise one.
+      CREATE TABLE IF NOT EXISTS codes (
+        id TEXT PRIMARY KEY,
+        code_hash TEXT NOT NULL UNIQUE,
+        hint TEXT NOT NULL,
+        plan TEXT NOT NULL,
+        days INTEGER NOT NULL,
+        status TEXT NOT NULL,              -- unused | used | disabled
+        batch TEXT,
+        created_by TEXT NOT NULL,
+        created_ms INTEGER NOT NULL,
+        used_by TEXT,
+        used_ms INTEGER,
+        licence_id TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_codes_status ON codes(status);
     `);
     // columns added after the first release
     this.addColumn('licences', 'key_set_ms', 'INTEGER');
     this.addColumn('licences', 'machine_moved_ms', 'INTEGER');
+    this.addColumn('events', 'user_id', 'TEXT');
+    this.addColumn('sessions', 'device', 'TEXT');
+    this.addColumn('users', 'role_state', 'INTEGER NOT NULL DEFAULT 0'); // 1 = we gave the Discord role
+    this.addColumn('users', 'in_guild', 'INTEGER'); // null unknown, 0 not in server, 1 in server
+    this.addColumn('orders', 'invoice_id', 'TEXT');
+    this.addColumn('orders', 'invoice_url', 'TEXT');
+    this.addColumn('orders', 'payment_id', 'TEXT');
+    this.addColumn('orders', 'pay_currency', 'TEXT');
+    this.addColumn('orders', 'paid_amount', 'TEXT');
+    this.addColumn('orders', 'provider_status', 'TEXT');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_events_user ON events(user_id)');
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_ms)');
   }
 
   private addColumn(table: string, column: string, type: string): void {
@@ -111,9 +150,12 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
     if (!cols.some((c) => c.name === column)) this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
   }
 
-  /** Runs fn inside a transaction (all or nothing). */
+  /** Runs fn inside a transaction (all or nothing). Nested calls join the outer transaction. */
+  private depth = 0;
   tx<T>(fn: () => T): T {
+    if (this.depth > 0) return fn();
     this.db.exec('BEGIN IMMEDIATE');
+    this.depth++;
     try {
       const out = fn();
       this.db.exec('COMMIT');
@@ -121,6 +163,8 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
     } catch (e) {
       this.db.exec('ROLLBACK');
       throw e;
+    } finally {
+      this.depth--;
     }
   }
 
@@ -140,12 +184,12 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
     return Number(this.db.prepare(sql).run(...(params as never[])).changes);
   }
 
-  logEvent(kind: string, text: string): void {
-    this.run('INSERT INTO events(ts_ms, kind, text) VALUES (?,?,?)', Date.now(), kind, text);
+  logEvent(kind: string, text: string, userId: string | null = null): void {
+    this.run('INSERT INTO events(ts_ms, kind, text, user_id) VALUES (?,?,?,?)', Date.now(), kind, text, userId);
   }
 
-  recentEvents(limit = 50): { ts_ms: number; kind: string; text: string }[] {
-    return this.all('SELECT ts_ms, kind, text FROM events ORDER BY id DESC LIMIT ?', limit);
+  recentEvents(limit = 50): EventRow[] {
+    return this.all('SELECT * FROM events ORDER BY id DESC LIMIT ?', limit);
   }
 }
 

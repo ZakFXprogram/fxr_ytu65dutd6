@@ -23,6 +23,7 @@ export interface SessionRow {
   created_ms: number;
   expires_ms: number;
   last_seen_ms: number;
+  device: string | null;
 }
 
 export interface AuthContext {
@@ -134,8 +135,8 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     const now = Date.now();
     const ttl = admin ? ADMIN_TTL_MS : USER_TTL_MS;
     this.db.run(
-      'INSERT INTO sessions(id_hash, user_id, admin, created_ms, expires_ms, last_seen_ms) VALUES (?,?,?,?,?,?)',
-      sha256(sid), userId, admin ? 1 : 0, now, now + ttl, now,
+      'INSERT INTO sessions(id_hash, user_id, admin, created_ms, expires_ms, last_seen_ms, device) VALUES (?,?,?,?,?,?,?)',
+      sha256(sid), userId, admin ? 1 : 0, now, now + ttl, now, deviceLabel(req.get('user-agent')),
     );
     // keep only the most recent sessions of this member
     this.db.run(
@@ -177,6 +178,29 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
     return this.db.run('DELETE FROM sessions WHERE user_id = ?', userId);
   }
 
+  /** The member's own sessions. The public id is a prefix of the stored hash: it cannot be used as a cookie. */
+  listSessions(userId: string, current: SessionRow) {
+    return this.db
+      .all<SessionRow>('SELECT * FROM sessions WHERE user_id = ? AND expires_ms > ? ORDER BY last_seen_ms DESC', userId, Date.now())
+      .map((s) => ({
+        id: s.id_hash.slice(0, 16),
+        current: s.id_hash === current.id_hash,
+        device: s.device || 'Unknown device',
+        createdAt: s.created_ms,
+        lastSeenAt: s.last_seen_ms,
+        expiresAt: s.expires_ms,
+      }));
+  }
+
+  revokeSession(userId: string, publicId: string): boolean {
+    if (!/^[0-9a-f]{16}$/.test(publicId)) return false;
+    return this.db.run('DELETE FROM sessions WHERE user_id = ? AND substr(id_hash, 1, 16) = ?', userId, publicId) > 0;
+  }
+
+  revokeOtherSessions(userId: string, current: SessionRow): number {
+    return this.db.run('DELETE FROM sessions WHERE user_id = ? AND id_hash != ?', userId, current.id_hash);
+  }
+
   private destroyCurrent(req: Request): void {
     const sid = (req.cookies as Record<string, string> | undefined)?.[this.cookieName];
     if (typeof sid === 'string' && sid.length <= 64) this.db.run('DELETE FROM sessions WHERE id_hash = ?', sha256(sid));
@@ -185,6 +209,16 @@ export class AuthService implements OnModuleInit, OnModuleDestroy {
   private sweep(): void {
     this.db.run('DELETE FROM sessions WHERE expires_ms <= ?', Date.now());
   }
+}
+
+/** "Chrome on Windows" from a user agent; the raw user agent is not stored. */
+export function deviceLabel(ua: string | undefined): string {
+  if (!ua) return 'Unknown device';
+  const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox'
+    : /Chrome\//.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Browser';
+  const os = /Windows/.test(ua) ? 'Windows' : /iPhone|iPad/.test(ua) ? 'iOS' : /Android/.test(ua) ? 'Android'
+    : /Mac OS X|Macintosh/.test(ua) ? 'macOS' : /Linux/.test(ua) ? 'Linux' : 'unknown system';
+  return `${browser} on ${os}`;
 }
 
 /** What the browser is allowed to know about a member. */

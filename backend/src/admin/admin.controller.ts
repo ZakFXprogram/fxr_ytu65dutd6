@@ -1,112 +1,148 @@
-import { Body, Controller, Get, Inject, NotFoundException, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, NotFoundException, Param, Post, Query, Res, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { IsInt, IsOptional, IsString, Length, Matches, Max, Min } from 'class-validator';
+import { Type } from 'class-transformer';
+import { ArrayMaxSize, ArrayMinSize, IsArray, IsInt, IsOptional, IsString, Length, Matches, Max, Min } from 'class-validator';
+import type { Response } from 'express';
 import { AdminGuard, CurrentAuth } from '../auth/guards';
-import { AuthService, type AuthContext, type UserRow } from '../auth/auth.service';
+import { AuthService, type AuthContext } from '../auth/auth.service';
 import { LicencesService } from '../licences/licences.service';
-import { OrdersService, ORDER_SUBMITTED } from '../orders/orders.service';
+import { OrdersService } from '../orders/orders.service';
+import { CodesService } from '../codes/codes.service';
+import { RoleSyncService } from '../roles/role-sync.service';
+import { AdminService } from './admin.service';
 import { DbService } from '../db/db.service';
-import { CONFIG, USDT_TRC20_CONTRACT, type AppConfig } from '../config';
 import { DISCORD_ID } from '../common/util';
 
-class CreateDto {
-  @IsString() @Matches(DISCORD_ID, { message: 'userRef must be a Discord user id' }) userRef!: string;
-  @IsString() @Length(1, 32) plan!: string;
-  @IsOptional() @IsInt() @Min(0) @Max(36500) days?: number;
+const ID = /^[0-9a-f]{24}$/;
+
+class ListDto {
+  @IsOptional() @IsString() @Length(0, 100) q?: string;
+  @IsOptional() @IsString() @Matches(/^[a-z_]{0,20}$/) status?: string;
+  @IsOptional() @IsString() @Matches(/^[a-z0-9]{0,32}$/) plan?: string;
+  @IsOptional() @IsString() @Matches(/^[a-z]{0,20}$/) filter?: string;
+  @IsOptional() @IsString() @Matches(/^[a-z]{0,20}$/) kind?: string;
+  @IsOptional() @IsString() @Length(0, 40) batch?: string;
+  @IsOptional() @IsString() @Matches(/^[a-z]{0,20}$/) sort?: string;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(1) @Max(100000) page?: number;
+  @IsOptional() @Type(() => Number) @IsInt() @Min(5) @Max(100) size?: number;
+}
+class OverviewDto {
+  @IsOptional() @Type(() => Number) @IsInt() @Min(-840) @Max(840) tz?: number;
 }
 class IdDto {
-  @IsString() @Matches(/^[0-9a-f]{24}$/) id!: string;
+  @IsString() @Matches(ID) id!: string;
 }
-class RejectDto extends IdDto {
+class IdsDto {
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(200) @Matches(ID, { each: true }) ids!: string[];
+}
+class NoteDto extends IdDto {
   @IsOptional() @IsString() @Length(0, 200) note?: string;
 }
-class UserIdDto {
+class ExtendDto extends IdsDto {
+  @IsInt() @Min(1) @Max(3650) days!: number;
+}
+class GrantDto {
+  @IsString() @Matches(DISCORD_ID, { message: 'Enter a Discord user id (17-20 digits).' }) userId!: string;
+  @IsString() @Length(1, 32) plan!: string;
+  @IsOptional() @IsInt() @Min(1) @Max(3650) days?: number;
+}
+class MemberIdsDto {
+  @IsArray() @ArrayMinSize(1) @ArrayMaxSize(200) @Matches(DISCORD_ID, { each: true }) ids!: string[];
+}
+class MemberIdDto {
   @IsString() @Matches(DISCORD_ID) id!: string;
+}
+class GenerateDto {
+  @IsString() @Length(1, 32) plan!: string;
+  @IsInt() @Min(1) @Max(200) count!: number;
+  @IsOptional() @IsString() @Matches(/^[\w .-]{0,40}$/) batch?: string;
+  @IsOptional() @IsInt() @Min(1) @Max(3650) days?: number;
 }
 
 /**
  * The owner's panel API. Mounted internally at /api/admin, but that prefix is refused from outside: the browser
- * reaches it only through /api/<ADMIN_PATH>/..., and every route answers 404 unless the caller holds an admin
+ * reaches it only through /api/<ADMIN_PATH>/..., and every route answers 404 unless the caller holds an owner
  * session (allow-listed Discord id, signed in with Discord 2FA on).
  */
 @Controller('api/admin')
 @UseGuards(AdminGuard)
-@Throttle({ default: { limit: 60, ttl: 60_000 } })
+@Throttle({ default: { limit: 120, ttl: 60_000 } })
 export class AdminController {
   constructor(
+    private readonly admin: AdminService,
     private readonly auth: AuthService,
     private readonly licences: LicencesService,
     private readonly orders: OrdersService,
+    private readonly codes: CodesService,
+    private readonly roles: RoleSyncService,
     private readonly db: DbService,
-    @Inject(CONFIG) private readonly cfg: AppConfig,
   ) {}
 
-  @Get('state')
-  state() {
-    const users = this.db.all<UserRow & { licences: number }>(
-      `SELECT u.*, (SELECT COUNT(*) FROM licences l WHERE l.user_ref = u.id) AS licences
-       FROM users u ORDER BY u.last_login_ms DESC LIMIT 300`,
-    );
-    const names = new Map(users.map((u) => [u.id, u.display_name || u.username]));
-    const nameOf = (id: string) => names.get(id) ?? this.auth.user(id)?.username ?? null;
-    const orders = this.orders.forAdmin();
-    return {
-      payAddress: this.cfg.payAddress,
-      usdtContract: USDT_TRC20_CONTRACT,
-      stats: {
-        ...this.licences.stats(),
-        toCheck: orders.filter((o) => o.status === ORDER_SUBMITTED).length,
-        members: this.db.get<{ n: number }>('SELECT COUNT(*) AS n FROM users')!.n,
-      },
-      plans: this.cfg.plans.map((p) => ({ id: p.id, label: p.label, days: p.days, price: p.price })),
-      orders: orders.map((o) => ({ ...this.orders.view(o), userId: o.user_id, userName: nameOf(o.user_id) })),
-      licences: this.licences.all().map((l) => ({
-        id: l.id,
-        userRef: l.user_ref,
-        userName: nameOf(l.user_ref),
-        plan: l.plan,
-        status: this.licences.effectiveStatus(l),
-        lifetime: l.end_ms === 0,
-        expiresAt: l.end_ms,
-        activated: !!l.machine_id,
-        keySet: !!l.key_set_ms,
-        lastSeenAt: l.last_seen_ms,
-        source: l.source,
-        createdAt: l.created_ms,
-      })),
-      members: users.map((u) => ({
-        id: u.id,
-        name: u.display_name || u.username,
-        username: u.username,
-        banned: !!u.banned,
-        licences: u.licences,
-        lastLoginAt: u.last_login_ms,
-        owner: this.auth.isAdminId(u.id),
-      })),
-      events: this.db.recentEvents(60),
-    };
+  @Get('overview')
+  overview(@Query() q: OverviewDto) {
+    return this.admin.overview(q.tz ?? 0);
   }
 
-  @Post('orders/confirm')
-  confirm(@CurrentAuth() a: AuthContext, @Body() dto: IdDto) {
-    return this.orders.view(this.orders.confirm(dto.id, a.user.id));
+  // ----- orders
+  @Get('orders')
+  listOrders(@Query() q: ListDto) {
+    return this.admin.listOrders(q);
   }
 
-  @Post('orders/reject')
-  reject(@CurrentAuth() a: AuthContext, @Body() dto: RejectDto) {
-    return this.orders.view(this.orders.reject(dto.id, a.user.id, dto.note ?? ''));
+  @Get('orders.csv')
+  @Header('Content-Type', 'text/csv; charset=utf-8')
+  ordersCsv(@Query() q: ListDto, @Res({ passthrough: true }) res: Response) {
+    res.setHeader('Content-Disposition', `attachment; filename="fxr-orders-${new Date().toISOString().slice(0, 10)}.csv"`);
+    return this.admin.ordersCsv(q);
   }
 
-  @Post('licences/create')
-  create(@CurrentAuth() a: AuthContext, @Body() dto: CreateDto) {
+  @Post('orders/recheck')
+  recheck(@CurrentAuth() a: AuthContext, @Body() dto: IdDto) {
+    return this.orders.recheck(dto.id, a.user.id).then((o) => ({ status: o.status }));
+  }
+
+  @Post('orders/mark-paid')
+  markPaid(@CurrentAuth() a: AuthContext, @Body() dto: NoteDto) {
+    return { status: this.orders.markPaidByOwner(dto.id, a.user.id, dto.note ?? '').status };
+  }
+
+  @Post('orders/cancel')
+  cancelOrders(@CurrentAuth() a: AuthContext, @Body() dto: IdsDto) {
+    return { done: dto.ids.filter((id) => this.orders.cancelByOwner(id, a.user.id)).length };
+  }
+
+  // ----- subscriptions
+  @Get('licences')
+  listLicences(@Query() q: ListDto) {
+    return this.admin.listLicences(q);
+  }
+
+  @Post('licences/grant')
+  grant(@CurrentAuth() a: AuthContext, @Body() dto: GrantDto) {
     if (!this.licences.plan(dto.plan)) throw new NotFoundException('Unknown plan');
-    const l = this.licences.grant(dto.userRef, dto.plan, `panel:${a.user.id}`, '', dto.days);
+    const l = this.licences.grant(dto.userId, dto.plan, `panel:${a.user.id}`, '', dto.days);
+    this.roles.syncSoon(dto.userId);
     return { id: l.id };
   }
 
+  @Post('licences/extend')
+  extend(@CurrentAuth() a: AuthContext, @Body() dto: ExtendDto) {
+    let done = 0;
+    for (const id of dto.ids) {
+      const owner = this.licences.extend(id, dto.days, a.user.id);
+      if (owner) { done++; this.roles.syncSoon(owner); }
+    }
+    return { done };
+  }
+
   @Post('licences/revoke')
-  revoke(@CurrentAuth() a: AuthContext, @Body() dto: IdDto) {
-    return { ok: this.licences.revoke(dto.id, a.user.id) };
+  revoke(@CurrentAuth() a: AuthContext, @Body() dto: IdsDto) {
+    let done = 0;
+    for (const id of dto.ids) {
+      const owner = this.licences.revoke(id, a.user.id);
+      if (owner) { done++; this.roles.syncSoon(owner); }
+    }
+    return { done };
   }
 
   @Post('licences/reset-machine')
@@ -114,27 +150,65 @@ export class AdminController {
     return { ok: this.licences.resetMachine(dto.id, a.user.id) };
   }
 
-  /** Blocks sign-in and ends every session of a member right away. */
+  // ----- members
+  @Get('members')
+  listMembers(@Query() q: ListDto) {
+    return this.admin.listMembers(q);
+  }
+
+  @Get('members/:id')
+  member(@Param('id') id: string) {
+    if (!DISCORD_ID.test(id)) throw new NotFoundException();
+    const m = this.admin.member(id);
+    if (!m) throw new NotFoundException();
+    return m;
+  }
+
   @Post('members/ban')
-  ban(@CurrentAuth() a: AuthContext, @Body() dto: UserIdDto) {
-    if (this.auth.isAdminId(dto.id)) throw new NotFoundException();
-    const ok = this.auth.setBanned(dto.id, true);
-    if (ok) this.db.logEvent('ban', `member ${dto.id} banned by ${a.user.id}`);
-    return { ok };
+  ban(@CurrentAuth() a: AuthContext, @Body() dto: MemberIdsDto) {
+    const ids = dto.ids.filter((id) => !this.auth.isAdminId(id));
+    const done = ids.filter((id) => this.auth.setBanned(id, true)).length;
+    if (done) this.db.logEvent('ban', `${done} member(s) banned by ${a.user.id}`);
+    return { done };
   }
 
   @Post('members/unban')
-  unban(@CurrentAuth() a: AuthContext, @Body() dto: UserIdDto) {
-    const ok = this.auth.setBanned(dto.id, false);
-    if (ok) this.db.logEvent('ban', `member ${dto.id} unbanned by ${a.user.id}`);
-    return { ok };
+  unban(@CurrentAuth() a: AuthContext, @Body() dto: MemberIdsDto) {
+    const done = dto.ids.filter((id) => this.auth.setBanned(id, false)).length;
+    if (done) this.db.logEvent('ban', `${done} member(s) unbanned by ${a.user.id}`);
+    return { done };
   }
 
-  /** Signs out every session of a member (e.g. a lost or stolen device). */
   @Post('members/logout')
-  logoutMember(@CurrentAuth() a: AuthContext, @Body() dto: UserIdDto) {
-    const n = this.auth.revokeUserSessions(dto.id);
-    this.db.logEvent('sessions', `${n} session(s) of ${dto.id} ended by ${a.user.id}`);
-    return { ok: true, ended: n };
+  logoutMember(@Body() dto: MemberIdDto) {
+    return { ended: this.auth.revokeUserSessions(dto.id) };
+  }
+
+  @Post('members/sync-role')
+  async syncRole(@Body() dto: MemberIdDto) {
+    return { result: await this.roles.syncUser(dto.id) };
+  }
+
+  // ----- redeem keys
+  @Get('codes')
+  listCodes(@Query() q: ListDto) {
+    return this.admin.listCodes(q);
+  }
+
+  @Throttle({ default: { limit: 20, ttl: 60_000 } })
+  @Post('codes/generate')
+  generate(@CurrentAuth() a: AuthContext, @Body() dto: GenerateDto) {
+    return { codes: this.codes.generate(dto.plan, dto.count, (dto.batch ?? '').trim(), a.user.id, dto.days) };
+  }
+
+  @Post('codes/disable')
+  disable(@CurrentAuth() a: AuthContext, @Body() dto: IdsDto) {
+    return { done: this.codes.disable(dto.ids, a.user.id) };
+  }
+
+  // ----- activity
+  @Get('events')
+  events(@Query() q: ListDto) {
+    return this.admin.listEvents(q);
   }
 }

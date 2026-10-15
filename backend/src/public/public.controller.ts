@@ -13,14 +13,14 @@ export class PublicController {
       company: this.cfg.company,
       discord: this.cfg.discordInvite,
       support: this.cfg.supportEmail,
-      paymentsOpen: !!this.cfg.payAddress,
+      paymentsOpen: !!(this.cfg.nowpayments.apiKey && this.cfg.nowpayments.ipnSecret),
       plans: this.cfg.plans.map((p) => ({
         id: p.id,
         label: p.label,
         price: p.price,
         days: p.days,
         lifetime: p.days === 0,
-        perMonth: p.days >= 60 ? Math.round(p.price / Math.round(p.days / 30)) : null,
+        perMonth: p.days >= 60 ? Math.round((p.price / Math.round(p.days / 30)) * 100) / 100 : null,
       })),
     };
   }

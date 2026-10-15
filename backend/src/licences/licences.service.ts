@@ -72,13 +72,18 @@ export class LicencesService {
     if (!plan) throw new Error('unknown plan ' + planId);
     const days = daysOverride ?? plan.days;
     const now = Date.now();
+    // a licence can be granted to a Discord id that never signed in yet (panel); keep a placeholder member row
+    this.db.run(
+      `INSERT OR IGNORE INTO users(id, username, display_name, avatar, banned, created_ms, last_login_ms) VALUES (?,?,NULL,NULL,0,?,0)`,
+      userRef, userRef, now,
+    );
     const current = this.db.get<LicenceRow>(
       `SELECT * FROM licences WHERE user_ref = ? AND status = ? ORDER BY (end_ms = 0) DESC, end_ms DESC LIMIT 1`,
       userRef, LIC_ACTIVE,
     );
     if (current) {
       if (current.end_ms === 0) {
-        this.db.logEvent('grant', `licence ${current.id} is already lifetime; ${planId} via ${source} added nothing`);
+        this.db.logEvent('grant', `licence ${current.id} is already lifetime; ${planId} via ${source} added nothing`, userRef);
         return current;
       }
       const end = days === 0 ? 0 : Math.max(current.end_ms, now) + days * 86400_000;
@@ -86,7 +91,7 @@ export class LicencesService {
         'UPDATE licences SET plan = ?, end_ms = ?, order_id = COALESCE(?, order_id), updated_ms = ? WHERE id = ?',
         planId, end, orderId || null, now, current.id,
       );
-      this.db.logEvent('renew', `licence ${current.id} of ${userRef} extended with ${planId} via ${source}`);
+      this.db.logEvent('renew', `licence of ${userRef} extended: ${planId} via ${source}`, userRef);
       return this.byId(current.id)!;
     }
     const id = newId();
@@ -97,7 +102,7 @@ export class LicencesService {
        VALUES (?,?,?,?,?,?,?,?,NULL,?,NULL,?,?,NULL,NULL)`,
       id, userRef, planId, sha256(LicencesService.newKey() + newId()), LIC_ACTIVE, source, now, end, orderId || null, now, now,
     );
-    this.db.logEvent('issue', `licence ${id} created for ${userRef} (${planId}) via ${source}`);
+    this.db.logEvent('issue', `licence created for ${userRef}: ${planId} via ${source}`, userRef);
     return this.byId(id)!;
   }
 
@@ -133,7 +138,7 @@ export class LicencesService {
     const raw = LicencesService.newKey();
     const now = Date.now();
     this.db.run('UPDATE licences SET key_hash = ?, key_set_ms = ?, updated_ms = ? WHERE id = ?', sha256(raw), now, now, id);
-    this.db.logEvent('key', `licence ${id}: owner generated a new key`);
+    this.db.logEvent('key', 'new licence key generated', userRef);
     return raw;
   }
 
@@ -146,20 +151,35 @@ export class LicencesService {
     if (!l.machine_id) return { ok: true, nextMoveAt: next };
     if (now < next) return { ok: false, nextMoveAt: next };
     this.db.run('UPDATE licences SET machine_id = NULL, machine_moved_ms = ?, updated_ms = ? WHERE id = ?', now, now, id);
-    this.db.logEvent('move', `licence ${id}: owner released the computer`);
+    this.db.logEvent('move', 'computer released (move to another PC)', userRef);
     return { ok: true, nextMoveAt: now + MOVE_COOLDOWN_MS };
   }
 
-  revoke(id: string, by: string): boolean {
-    const n = this.db.run('UPDATE licences SET status = ?, updated_ms = ? WHERE id = ?', LIC_REVOKED, Date.now(), id);
-    if (n) this.db.logEvent('revoke', `licence ${id} revoked by ${by}`);
-    return n > 0;
+  /** Returns the owner's Discord id when something changed (so the caller can sync the role). */
+  revoke(id: string, by: string): string | null {
+    const l = this.byId(id);
+    if (!l || l.status === LIC_REVOKED) return null;
+    this.db.run('UPDATE licences SET status = ?, updated_ms = ? WHERE id = ?', LIC_REVOKED, Date.now(), id);
+    this.db.logEvent('revoke', `licence of ${l.user_ref} revoked by ${by}`, l.user_ref);
+    return l.user_ref;
+  }
+
+  /** Adds days to a licence (from today if it already ended). Lifetime licences are left as they are. */
+  extend(id: string, days: number, by: string): string | null {
+    const l = this.byId(id);
+    if (!l || l.status === LIC_REVOKED || l.end_ms === 0) return null;
+    const now = Date.now();
+    this.db.run('UPDATE licences SET end_ms = ?, updated_ms = ? WHERE id = ?', Math.max(l.end_ms, now) + days * 86400_000, now, id);
+    this.db.logEvent('extend', `licence of ${l.user_ref} extended by ${days} days by ${by}`, l.user_ref);
+    return l.user_ref;
   }
 
   resetMachine(id: string, by: string): boolean {
-    const n = this.db.run('UPDATE licences SET machine_id = NULL, updated_ms = ? WHERE id = ?', Date.now(), id);
-    if (n) this.db.logEvent('reset', `licence ${id} computer reset by ${by}`);
-    return n > 0;
+    const l = this.byId(id);
+    if (!l) return false;
+    this.db.run('UPDATE licences SET machine_id = NULL, updated_ms = ? WHERE id = ?', Date.now(), id);
+    this.db.logEvent('reset', `computer of ${l.user_ref} reset by ${by}`, l.user_ref);
+    return true;
   }
 
   /** Loader authentication: validate a key for a machine, binding it on first use. */

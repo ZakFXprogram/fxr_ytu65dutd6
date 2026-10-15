@@ -5,6 +5,7 @@ import { AuthService, publicUser } from './auth.service';
 import { DiscordClient } from './discord.client';
 import { DbService } from '../db/db.service';
 import { CONFIG, type AppConfig } from '../config';
+import { RoleSyncService } from '../roles/role-sync.service';
 
 /** Sign in with Discord — the only way to sign in, for members and for the owner. */
 @Controller('api/auth')
@@ -16,6 +17,7 @@ export class AuthController {
     private readonly discord: DiscordClient,
     private readonly db: DbService,
     @Inject(CONFIG) private readonly cfg: AppConfig,
+    private readonly roles: RoleSyncService,
   ) {}
 
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
@@ -57,7 +59,12 @@ export class AuthController {
     const listed = this.auth.isAdminId(user.id);
     const admin = listed && (du.mfa_enabled === true || !this.cfg.requireAdminMfa);
     this.auth.createSession(req, res, user.id, admin);
-    if (listed) this.db.logEvent('login', `owner ${user.id} signed in${admin ? '' : ' WITHOUT panel access (Discord 2FA off)'}`);
+    this.db.logEvent(
+      'login',
+      listed ? `owner signed in${admin ? '' : ' WITHOUT panel access (Discord 2FA off)'}` : 'signed in with Discord',
+      user.id,
+    );
+    this.roles.syncSoon(user.id); // picks up the role if the member joined the server since
     res.redirect(302, next);
   }
 

@@ -11,11 +11,14 @@ import { AuthService } from './auth/auth.service';
 import { DiscordClient } from './auth/discord.client';
 import { AdminGuard, UserGuard } from './auth/guards';
 import { PublicController } from './public/public.controller';
-import { WebhookController } from './public/webhook.controller';
 import { LoaderController } from './licences/loader.controller';
 import { AuthController } from './auth/auth.controller';
 import { AccountController } from './account/account.controller';
-import { OrdersController } from './orders/orders.controller';
+import { NowPaymentsIpnController, OrdersController } from './orders/orders.controller';
+import { NowPaymentsClient } from './payments/nowpayments.client';
+import { RoleSyncService } from './roles/role-sync.service';
+import { CodesService } from './codes/codes.service';
+import { AdminService } from './admin/admin.service';
 import { AdminController } from './admin/admin.controller';
 
 @Module({
@@ -32,8 +35,8 @@ import { AdminController } from './admin/admin.controller';
     AuthController,
     AccountController,
     OrdersController,
+    NowPaymentsIpnController,
     LoaderController,
-    WebhookController,
     AdminController,
   ],
   providers: [
@@ -41,6 +44,10 @@ import { AdminController } from './admin/admin.controller';
     DbService,
     LicencesService,
     OrdersService,
+    NowPaymentsClient,
+    RoleSyncService,
+    CodesService,
+    AdminService,
     AuthService,
     DiscordClient,
     UserGuard,
