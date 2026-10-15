@@ -2,26 +2,21 @@ import { Module } from '@nestjs/common';
 import { ServeStaticModule } from '@nestjs/serve-static';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
-import { join } from 'node:path';
-import { existsSync } from 'node:fs';
 import { CONFIG, loadConfig } from './config';
+import { frontendDir } from './web';
 import { DbService } from './db/db.service';
 import { LicencesService } from './licences/licences.service';
-import { AdminAuth, AdminGuard } from './admin/admin.guard';
+import { OrdersService } from './orders/orders.service';
+import { AuthService } from './auth/auth.service';
+import { DiscordClient } from './auth/discord.client';
+import { AdminGuard, UserGuard } from './auth/guards';
 import { PublicController } from './public/public.controller';
 import { WebhookController } from './public/webhook.controller';
 import { LoaderController } from './licences/loader.controller';
+import { AuthController } from './auth/auth.controller';
+import { AccountController } from './account/account.controller';
+import { OrdersController } from './orders/orders.controller';
 import { AdminController } from './admin/admin.controller';
-
-// The Angular build is copied next to the server at deploy time (see Dockerfile). Locally it is two
-// directories up in frontend/dist/frontend/browser.
-function frontendDir(): string {
-  const candidates = [
-    join(__dirname, '..', 'public'),
-    join(__dirname, '..', '..', 'frontend', 'dist', 'frontend', 'browser'),
-  ];
-  return candidates.find((p) => existsSync(p)) ?? candidates[0];
-}
 
 @Module({
   imports: [
@@ -29,15 +24,26 @@ function frontendDir(): string {
     ServeStaticModule.forRoot({
       rootPath: frontendDir(),
       exclude: ['/api/{*rest}'],
-      serveStaticOptions: { fallthrough: true },
+      serveStaticOptions: { fallthrough: true, index: false },
     }),
   ],
-  controllers: [PublicController, WebhookController, LoaderController, AdminController],
+  controllers: [
+    PublicController,
+    AuthController,
+    AccountController,
+    OrdersController,
+    LoaderController,
+    WebhookController,
+    AdminController,
+  ],
   providers: [
     { provide: CONFIG, useFactory: loadConfig },
     DbService,
     LicencesService,
-    AdminAuth,
+    OrdersService,
+    AuthService,
+    DiscordClient,
+    UserGuard,
     AdminGuard,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
   ],

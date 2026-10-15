@@ -1,22 +1,10 @@
-import { Body, Controller, Get, Inject, Post } from '@nestjs/common';
-import { IsString, Length } from 'class-validator';
-import { Throttle } from '@nestjs/throttler';
+import { Controller, Get, Inject } from '@nestjs/common';
 import { CONFIG, type AppConfig } from '../config';
-import { LicencesService } from '../licences/licences.service';
 
-class LicenceLookupDto {
-  @IsString()
-  @Length(8, 40)
-  key!: string;
-}
-
-/** Everything the public website needs: site info, plans, and a licence status lookup. */
+/** Everything the public website needs before sign-in. */
 @Controller('api')
 export class PublicController {
-  constructor(
-    @Inject(CONFIG) private readonly cfg: AppConfig,
-    private readonly licences: LicencesService,
-  ) {}
+  constructor(@Inject(CONFIG) private readonly cfg: AppConfig) {}
 
   @Get('site')
   site() {
@@ -25,6 +13,7 @@ export class PublicController {
       company: this.cfg.company,
       discord: this.cfg.discordInvite,
       support: this.cfg.supportEmail,
+      paymentsOpen: !!this.cfg.payAddress,
       plans: this.cfg.plans.map((p) => ({
         id: p.id,
         label: p.label,
@@ -32,7 +21,6 @@ export class PublicController {
         days: p.days,
         lifetime: p.days === 0,
         perMonth: p.days >= 60 ? Math.round(p.price / Math.round(p.days / 30)) : null,
-        checkoutUrl: p.checkoutUrl,
       })),
     };
   }
@@ -40,11 +28,5 @@ export class PublicController {
   @Get('health')
   health() {
     return { ok: true };
-  }
-
-  @Throttle({ default: { limit: 10, ttl: 60_000 } })
-  @Post('licence/status')
-  licenceStatus(@Body() dto: LicenceLookupDto) {
-    return this.licences.publicStatus(dto.key);
   }
 }

@@ -1,9 +1,10 @@
 import { Component, inject, signal } from '@angular/core';
 import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
-import { ApiService } from './core/api.service';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { ApiService } from './core/api.service';
+import { SessionService } from './core/session.service';
 
 @Component({
   selector: 'app-root',
@@ -19,8 +20,16 @@ import { catchError } from 'rxjs/operators';
           <a routerLink="/faq" routerLinkActive="active">FAQ</a>
         </nav>
         <div class="hdr-cta">
-          <a class="btn btn-ghost" routerLink="/licence">My licence</a>
-          <a class="btn btn-primary" routerLink="/pricing">Get access</a>
+          @if (session.user(); as u) {
+            <a class="who" routerLink="/account" title="My account">
+              @if (u.avatarUrl) { <img [src]="u.avatarUrl" alt="" /> } @else { <span class="ava">{{ u.name.charAt(0) }}</span> }
+              <span>{{ u.name }}</span>
+            </a>
+            <button class="btn btn-ghost btn-sm" (click)="session.logout()">Sign out</button>
+          } @else if (session.me()) {
+            <button class="btn btn-discord btn-sm" (click)="session.login()">Continue with Discord</button>
+            <a class="btn btn-primary btn-sm" routerLink="/pricing">Get access</a>
+          }
         </div>
         <button class="burger" (click)="menu.set(!menu())" aria-label="Menu">☰</button>
       </div>
@@ -29,7 +38,12 @@ import { catchError } from 'rxjs/operators';
         <a routerLink="/pricing">Pricing</a>
         <a routerLink="/install">Install</a>
         <a routerLink="/faq">FAQ</a>
-        <a routerLink="/licence">My licence</a>
+        @if (session.signedIn()) {
+          <a routerLink="/account">My account</a>
+          <a (click)="session.logout()" style="cursor:pointer">Sign out</a>
+        } @else {
+          <a (click)="session.login()" style="cursor:pointer">Continue with Discord</a>
+        }
       </div>
     </header>
 
@@ -39,7 +53,7 @@ import { catchError } from 'rxjs/operators';
       <div class="wrap ftr-in">
         <div style="max-width:320px">
           <div class="hdr-logo" style="margin-bottom:8px"><img src="/logo.png" alt="FXR" style="width:28px;height:28px" /> FXR OrderFlow</div>
-          <div>Institutional-grade order flow studies for MotiveWave. Payments are verified on-chain; we never ask for your wallet's private key or seed phrase.</div>
+          <div>Institutional-grade order flow studies for MotiveWave. We never ask for your wallet's private key or seed phrase, and we never send payment addresses by DM.</div>
         </div>
         <div class="ftr-cols">
           <div>
@@ -51,8 +65,8 @@ import { catchError } from 'rxjs/operators';
           <div>
             <strong style="color:var(--mut)">Support</strong>
             <a routerLink="/faq">FAQ</a>
-            <a routerLink="/licence">My licence</a>
-            @if (discord()) { <a [href]="discord()" target="_blank" rel="noopener">Discord</a> }
+            <a routerLink="/account">My account</a>
+            @if (discord()) { <a [href]="discord()" target="_blank" rel="noopener noreferrer">Discord</a> }
           </div>
           <div>
             <strong style="color:var(--mut)">Legal</strong>
@@ -62,12 +76,13 @@ import { catchError } from 'rxjs/operators';
           </div>
         </div>
       </div>
-      <div class="wrap" style="margin-top:20px">© {{ year }} {{ company() }}. Not affiliated with MotiveWave.</div>
+      <div class="wrap" style="margin-top:20px">© {{ year }} {{ company() }}. Not affiliated with MotiveWave or Discord.</div>
     </footer>
   `,
 })
 export class AppComponent {
   private api = inject(ApiService);
+  session = inject(SessionService);
   menu = signal(false);
   year = new Date().getFullYear();
   private site = toSignal(this.api.site().pipe(catchError(() => of(null))), { initialValue: null });

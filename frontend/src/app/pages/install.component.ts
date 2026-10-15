@@ -18,7 +18,7 @@ import { Component, signal } from '@angular/core';
     <section class="wrap section">
       <div class="card">
         <div class="steps">
-          <div class="step"><h4>Get an active licence</h4><p class="mut" style="margin:0">Buy a plan on the <a href="/pricing">pricing page</a>. Keep your licence key handy.</p></div>
+          <div class="step"><h4>Get an active licence</h4><p class="mut" style="margin:0">Buy a plan on the <a href="/pricing">pricing page</a>, then get your licence key from <a href="/account">your account</a>.</p></div>
           <div class="step"><h4>Download FXR Loader</h4><p class="mut" style="margin:0">Grab <code>FXRLoader.jar</code> from the <strong>#downloads</strong> channel on our Discord.</p></div>
           <div class="step"><h4>Close MotiveWave</h4><p class="mut" style="margin:0">Fully quit MotiveWave before touching the extensions folder.</p></div>
           @if (os() === 'win') {
@@ -29,7 +29,7 @@ import { Component, signal } from '@angular/core';
           <div class="step"><h4>Copy the jar in</h4><p class="mut" style="margin:0">Put <code>FXRLoader.jar</code> in that folder. There must be only one copy.</p></div>
           <div class="step"><h4>Restart &amp; activate</h4><p class="mut" style="margin:0">Open MotiveWave, add any <strong>FXR</strong> study, and paste your licence key when asked. The studies unlock within seconds.</p></div>
         </div>
-        <div class="notice" style="margin-top:18px">A licence runs on one computer. To move it to another machine, reset it from the <a href="/licence">My licence</a> page or ask support.</div>
+        <div class="notice" style="margin-top:18px">A licence runs on one computer. To move it to another machine, release it from <a href="/account">your account</a> or ask support.</div>
       </div>
     </section>
 

@@ -15,7 +15,7 @@ import { STUDIES } from '../core/studies';
         <a class="btn btn-ghost" routerLink="/studies">Explore the studies</a>
       </div>
       <div class="chips">
-        <span class="chip">Instant activation</span>
+        <span class="chip">Sign in with Discord</span>
         <span class="chip">Updates included</span>
         <span class="chip">One licence, your machine</span>
         <span class="chip">Pay in USDT</span>

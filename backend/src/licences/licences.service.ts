@@ -1,22 +1,25 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { createHash, randomInt } from 'node:crypto';
+import { createHmac, randomInt } from 'node:crypto';
 import { DbService, newId } from '../db/db.service';
-import { CONFIG, type AppConfig } from '../config';
+import { CONFIG, type AppConfig, type Plan } from '../config';
+import { sha256 } from '../common/util';
 
 export interface LicenceRow {
   id: string;
-  user_ref: string;
+  user_ref: string; // Discord user id of the owner
   plan: string;
   key_hash: string;
   status: string;
   source: string;
   start_ms: number;
   end_ms: number; // 0 = lifetime
-  machine_id: string | null;
+  machine_id: string | null; // HMAC of the machine id, never the raw value
   order_id: string | null;
   last_seen_ms: number | null;
   created_ms: number;
   updated_ms: number;
+  key_set_ms: number | null; // when the owner last generated their key (null = never)
+  machine_moved_ms: number | null; // last self-service move to another computer
 }
 
 export const LIC_ACTIVE = 'active';
@@ -26,12 +29,12 @@ export const LIC_REVOKED = 'revoked';
 const KEY_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I
 const KEY_GROUPS = 4;
 const KEY_GROUP_LEN = 4;
+const MOVE_COOLDOWN_MS = 7 * 86400_000;
 
-function hashKey(raw: string): string {
-  return createHash('sha256').update(raw).digest('hex');
-}
-
-/** Licence authority: issue keys, validate them for the loader, manage them from the admin. */
+/**
+ * Licence authority. Keys are 80 random bits, stored only as SHA-256. A raw key exists exactly once: in the
+ * response to its owner when they generate it from their account. Nobody (not even the panel) can read it back.
+ */
 @Injectable()
 export class LicencesService {
   constructor(
@@ -52,24 +55,50 @@ export class LicencesService {
     return out;
   }
 
-  private planDays(planId: string): number {
-    return this.cfg.plans.find((p) => p.id === planId)?.days ?? 0;
+  plan(planId: string): Plan | undefined {
+    return this.cfg.plans.find((p) => p.id === planId);
   }
 
-  /** Create a licence and return it with its raw key (never stored). */
-  issue(userRef: string, planId: string, source: string, orderId = '', daysOverride?: number): { licence: LicenceRow; key: string } {
-    const raw = LicencesService.newKey();
+  private machineHash(machineId: string): string {
+    return createHmac('sha256', this.cfg.appSecret).update('machine:' + machineId).digest('hex');
+  }
+
+  /**
+   * Gives a member the time they paid for. If they already have a licence that is not revoked, it is extended
+   * (same key, same computer); otherwise a new licence is created. Lifetime turns the licence into lifetime.
+   */
+  grant(userRef: string, planId: string, source: string, orderId = '', daysOverride?: number): LicenceRow {
+    const plan = this.plan(planId);
+    if (!plan) throw new Error('unknown plan ' + planId);
+    const days = daysOverride ?? plan.days;
     const now = Date.now();
-    const days = daysOverride ?? this.planDays(planId);
-    const end = days > 0 ? now + days * 86400_000 : 0;
-    const id = newId();
-    this.db.run(
-      `INSERT INTO licences(id,user_ref,plan,key_hash,status,source,start_ms,end_ms,machine_id,order_id,last_seen_ms,created_ms,updated_ms)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      id, userRef, planId, hashKey(raw), LIC_ACTIVE, source, now, end, null, orderId || null, null, now, now,
+    const current = this.db.get<LicenceRow>(
+      `SELECT * FROM licences WHERE user_ref = ? AND status = ? ORDER BY (end_ms = 0) DESC, end_ms DESC LIMIT 1`,
+      userRef, LIC_ACTIVE,
     );
-    this.db.logEvent('issue', `licence ${id} issued to ${userRef} (${planId}) via ${source}`);
-    return { licence: this.byId(id)!, key: raw };
+    if (current) {
+      if (current.end_ms === 0) {
+        this.db.logEvent('grant', `licence ${current.id} is already lifetime; ${planId} via ${source} added nothing`);
+        return current;
+      }
+      const end = days === 0 ? 0 : Math.max(current.end_ms, now) + days * 86400_000;
+      this.db.run(
+        'UPDATE licences SET plan = ?, end_ms = ?, order_id = COALESCE(?, order_id), updated_ms = ? WHERE id = ?',
+        planId, end, orderId || null, now, current.id,
+      );
+      this.db.logEvent('renew', `licence ${current.id} of ${userRef} extended with ${planId} via ${source}`);
+      return this.byId(current.id)!;
+    }
+    const id = newId();
+    const end = days > 0 ? now + days * 86400_000 : 0;
+    // placeholder hash of a key nobody ever sees; the owner generates their real key from their account
+    this.db.run(
+      `INSERT INTO licences(id,user_ref,plan,key_hash,status,source,start_ms,end_ms,machine_id,order_id,last_seen_ms,created_ms,updated_ms,key_set_ms,machine_moved_ms)
+       VALUES (?,?,?,?,?,?,?,?,NULL,?,NULL,?,?,NULL,NULL)`,
+      id, userRef, planId, sha256(LicencesService.newKey() + newId()), LIC_ACTIVE, source, now, end, orderId || null, now, now,
+    );
+    this.db.logEvent('issue', `licence ${id} created for ${userRef} (${planId}) via ${source}`);
+    return this.byId(id)!;
   }
 
   byId(id: string): LicenceRow | undefined {
@@ -77,7 +106,11 @@ export class LicencesService {
   }
 
   byKey(raw: string): LicenceRow | undefined {
-    return this.db.get<LicenceRow>('SELECT * FROM licences WHERE key_hash = ?', hashKey(LicencesService.normalizeKey(raw)));
+    return this.db.get<LicenceRow>('SELECT * FROM licences WHERE key_hash = ?', sha256(LicencesService.normalizeKey(raw)));
+  }
+
+  forUser(userRef: string): LicenceRow[] {
+    return this.db.all<LicenceRow>('SELECT * FROM licences WHERE user_ref = ? ORDER BY created_ms DESC', userRef);
   }
 
   all(): LicenceRow[] {
@@ -88,27 +121,45 @@ export class LicencesService {
     return l.status === LIC_ACTIVE && (l.end_ms === 0 || l.end_ms > nowMs);
   }
 
-  /** The effective status shown to a user (active licences past their end read as expired). */
   effectiveStatus(l: LicenceRow): string {
     if (l.status === LIC_ACTIVE && !LicencesService.isActive(l)) return LIC_EXPIRED;
     return l.status;
   }
 
-  revoke(id: string): boolean {
+  /** Owner only: makes a brand-new key, returns it once. The previous key stops working immediately. */
+  rotateKey(id: string, userRef: string): string | null {
     const l = this.byId(id);
-    if (!l) return false;
-    this.db.run('UPDATE licences SET status = ?, updated_ms = ? WHERE id = ?', LIC_REVOKED, Date.now(), id);
-    this.db.logEvent('revoke', `licence ${id} revoked`);
-    return true;
+    if (!l || l.user_ref !== userRef || l.status === LIC_REVOKED) return null;
+    const raw = LicencesService.newKey();
+    const now = Date.now();
+    this.db.run('UPDATE licences SET key_hash = ?, key_set_ms = ?, updated_ms = ? WHERE id = ?', sha256(raw), now, now, id);
+    this.db.logEvent('key', `licence ${id}: owner generated a new key`);
+    return raw;
   }
 
-  /** Unbind the machine so the customer can activate on a new computer. */
-  resetMachine(id: string): boolean {
+  /** Owner only: unbind the computer, at most once every 7 days (stops passing one key around). */
+  moveMachine(id: string, userRef: string): { ok: boolean; nextMoveAt: number } {
     const l = this.byId(id);
-    if (!l) return false;
-    this.db.run('UPDATE licences SET machine_id = NULL, updated_ms = ? WHERE id = ?', Date.now(), id);
-    this.db.logEvent('reset', `licence ${id} machine binding reset`);
-    return true;
+    if (!l || l.user_ref !== userRef || l.status === LIC_REVOKED) return { ok: false, nextMoveAt: 0 };
+    const next = (l.machine_moved_ms ?? 0) + MOVE_COOLDOWN_MS;
+    const now = Date.now();
+    if (!l.machine_id) return { ok: true, nextMoveAt: next };
+    if (now < next) return { ok: false, nextMoveAt: next };
+    this.db.run('UPDATE licences SET machine_id = NULL, machine_moved_ms = ?, updated_ms = ? WHERE id = ?', now, now, id);
+    this.db.logEvent('move', `licence ${id}: owner released the computer`);
+    return { ok: true, nextMoveAt: now + MOVE_COOLDOWN_MS };
+  }
+
+  revoke(id: string, by: string): boolean {
+    const n = this.db.run('UPDATE licences SET status = ?, updated_ms = ? WHERE id = ?', LIC_REVOKED, Date.now(), id);
+    if (n) this.db.logEvent('revoke', `licence ${id} revoked by ${by}`);
+    return n > 0;
+  }
+
+  resetMachine(id: string, by: string): boolean {
+    const n = this.db.run('UPDATE licences SET machine_id = NULL, updated_ms = ? WHERE id = ?', Date.now(), id);
+    if (n) this.db.logEvent('reset', `licence ${id} computer reset by ${by}`);
+    return n > 0;
   }
 
   /** Loader authentication: validate a key for a machine, binding it on first use. */
@@ -120,26 +171,31 @@ export class LicencesService {
     if (!l) return { ok: false, reason: 'unknown key' };
     if (l.status === LIC_REVOKED) return { ok: false, reason: 'licence revoked' };
     if (!LicencesService.isActive(l)) return { ok: false, reason: 'licence expired' };
-    if (l.machine_id && l.machine_id !== machineId) return { ok: false, reason: 'licence already activated on another computer' };
+    const mh = this.machineHash(machineId);
+    if (l.machine_id && l.machine_id !== mh) return { ok: false, reason: 'licence already activated on another computer' };
     const now = Date.now();
     this.db.run(
       'UPDATE licences SET machine_id = COALESCE(machine_id, ?), last_seen_ms = ?, updated_ms = ? WHERE id = ?',
-      machineId, now, now, l.id,
+      mh, now, now, l.id,
     );
     return { ok: true, plan: l.plan, expiresAt: l.end_ms };
   }
 
-  /** Public status lookup for the "My licence" page. */
-  publicStatus(rawKey: string): { found: false } | { found: true; plan: string; status: string; expiresAt: number; lifetime: boolean; activated: boolean } {
-    const l = this.byKey(rawKey);
-    if (!l) return { found: false };
+  /** The member's view of their licence. */
+  view(l: LicenceRow) {
+    const now = Date.now();
+    const nextMoveAt = (l.machine_moved_ms ?? 0) + MOVE_COOLDOWN_MS;
     return {
-      found: true,
+      id: l.id,
       plan: l.plan,
+      planLabel: this.plan(l.plan)?.label ?? l.plan,
       status: this.effectiveStatus(l),
-      expiresAt: l.end_ms,
       lifetime: l.end_ms === 0,
+      expiresAt: l.end_ms,
       activated: !!l.machine_id,
+      keySetAt: l.key_set_ms ?? 0,
+      canMove: !!l.machine_id && now >= nextMoveAt,
+      nextMoveAt: now >= nextMoveAt ? 0 : nextMoveAt,
     };
   }
 

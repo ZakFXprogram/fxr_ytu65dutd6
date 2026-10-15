@@ -57,7 +57,71 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
         kind TEXT NOT NULL,
         text TEXT NOT NULL
       );
+
+      -- Customers and admins, identified only by their Discord account (no password, no e-mail stored).
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,               -- Discord user id
+        username TEXT NOT NULL,
+        display_name TEXT,
+        avatar TEXT,                       -- Discord avatar hash
+        banned INTEGER NOT NULL DEFAULT 0,
+        created_ms INTEGER NOT NULL,
+        last_login_ms INTEGER NOT NULL
+      );
+
+      -- Server-side sessions: the cookie holds a random 256-bit id, the table only its SHA-256.
+      CREATE TABLE IF NOT EXISTS sessions (
+        id_hash TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        admin INTEGER NOT NULL DEFAULT 0,
+        created_ms INTEGER NOT NULL,
+        expires_ms INTEGER NOT NULL,
+        last_seen_ms INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_sess_user ON sessions(user_id);
+
+      -- USDT orders. txid is UNIQUE so one payment can never be claimed twice.
+      CREATE TABLE IF NOT EXISTS orders (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL REFERENCES users(id),
+        plan TEXT NOT NULL,
+        amount TEXT NOT NULL,
+        pay_to TEXT NOT NULL,
+        status TEXT NOT NULL,
+        txid TEXT UNIQUE,
+        licence_id TEXT,
+        note TEXT,
+        decided_by TEXT,
+        created_ms INTEGER NOT NULL,
+        expires_ms INTEGER NOT NULL,
+        submitted_ms INTEGER,
+        decided_ms INTEGER,
+        updated_ms INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_orders_user ON orders(user_id);
+      CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
     `);
+    // columns added after the first release
+    this.addColumn('licences', 'key_set_ms', 'INTEGER');
+    this.addColumn('licences', 'machine_moved_ms', 'INTEGER');
+  }
+
+  private addColumn(table: string, column: string, type: string): void {
+    const cols = this.all<{ name: string }>(`PRAGMA table_info(${table})`);
+    if (!cols.some((c) => c.name === column)) this.db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${type}`);
+  }
+
+  /** Runs fn inside a transaction (all or nothing). */
+  tx<T>(fn: () => T): T {
+    this.db.exec('BEGIN IMMEDIATE');
+    try {
+      const out = fn();
+      this.db.exec('COMMIT');
+      return out;
+    } catch (e) {
+      this.db.exec('ROLLBACK');
+      throw e;
+    }
   }
 
   get handle(): DatabaseSync {
@@ -72,8 +136,8 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
     return this.db.prepare(sql).get(...(params as never[])) as T | undefined;
   }
 
-  run(sql: string, ...params: unknown[]): void {
-    this.db.prepare(sql).run(...(params as never[]));
+  run(sql: string, ...params: unknown[]): number {
+    return Number(this.db.prepare(sql).run(...(params as never[])).changes);
   }
 
   logEvent(kind: string, text: string): void {

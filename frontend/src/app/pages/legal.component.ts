@@ -41,9 +41,9 @@ const DOCS: Record<string, Doc> = {
     title: 'Privacy Policy',
     intro: 'What we store and why. We keep as little as possible.',
     sections: [
-      { h: 'What we store', p: 'Your Discord ID (to deliver and support your licence), your licence record, and a machine identifier used only to bind a licence to one computer. We never store your licence key in readable form.' },
-      { h: 'Payments', p: 'Payments are processed on-chain in USDT. We see the public transaction and the receiving address. We never ask for or hold your wallet private key or seed phrase.' },
-      { h: 'No tracking', p: 'The site uses no advertising or third-party analytics cookies. The only cookie is the admin session cookie, set after an operator signs in.' },
+      { h: 'What we store', p: 'From Discord: your id, username, display name and avatar — nothing else (no e-mail, no servers, no messages). Your licence record and orders. A one-way fingerprint of your computer id, used only to bind a licence to one computer. Your licence key is stored only as a one-way hash: nobody, including us, can read it back.' },
+      { h: 'Payments', p: 'You pay in USDT to our public address and give us the transaction ID, which is already public on the TRON blockchain. We never ask for or hold your wallet private key or seed phrase.' },
+      { h: 'Cookies', p: 'No advertising or analytics cookies. One session cookie after you sign in (HttpOnly, never readable by scripts), and a short-lived cookie during the Discord sign-in itself.' },
       { h: 'Your data', p: 'Ask us to show or delete your data at any time via support.' },
     ],
   },
