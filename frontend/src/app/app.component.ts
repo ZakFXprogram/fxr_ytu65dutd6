@@ -1,18 +1,31 @@
 import { Component, inject, signal } from '@angular/core';
-import { RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
+import { Router, RouterOutlet, RouterLink, RouterLinkActive } from '@angular/router';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { ApiService } from './core/api.service';
 import { SessionService } from './core/session.service';
+import { demoApi } from './core/demo/demo-setup';
 
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   template: `
+    @if (demo) {
+      <div class="demo-bar">
+        <div class="wrap spread">
+          <span><strong>Preview</strong> — sign-in and payments are simulated. Nothing here is real or sent anywhere.</span>
+          <span class="row" style="gap:6px">
+            <span class="small">View as</span>
+            <button class="btn btn-xs" [class.btn-primary]="!session.me()?.admin" [class.btn-ghost]="session.me()?.admin" (click)="viewAs('member')">Member</button>
+            <button class="btn btn-xs" [class.btn-primary]="session.me()?.admin" [class.btn-ghost]="!session.me()?.admin" (click)="viewAs('owner')">Owner</button>
+          </span>
+        </div>
+      </div>
+    }
     <header class="hdr">
       <div class="wrap hdr-in">
-        <a class="hdr-logo" routerLink="/"><img src="/logo.png" alt="FXR" /> FXR OrderFlow</a>
+        <a class="hdr-logo" routerLink="/"><img src="logo.png" alt="FXR" /> FXR OrderFlow</a>
         <nav class="nav">
           <a routerLink="/studies" routerLinkActive="active">Studies</a>
           <a routerLink="/pricing" routerLinkActive="active">Pricing</a>
@@ -52,7 +65,7 @@ import { SessionService } from './core/session.service';
     <footer class="ftr">
       <div class="wrap ftr-in">
         <div style="max-width:320px">
-          <div class="hdr-logo" style="margin-bottom:8px"><img src="/logo.png" alt="FXR" style="width:28px;height:28px" /> FXR OrderFlow</div>
+          <div class="hdr-logo" style="margin-bottom:8px"><img src="logo.png" alt="FXR" style="width:28px;height:28px" /> FXR OrderFlow</div>
           <div>Institutional-grade order flow studies for MotiveWave. We never ask for your wallet's private key or seed phrase, and we never send payment addresses by DM.</div>
         </div>
         <div class="ftr-cols">
@@ -83,9 +96,19 @@ import { SessionService } from './core/session.service';
 export class AppComponent {
   private api = inject(ApiService);
   session = inject(SessionService);
+  private router = inject(Router);
+  demo = demoApi;
   menu = signal(false);
   year = new Date().getFullYear();
   private site = toSignal(this.api.site().pipe(catchError(() => of(null))), { initialValue: null });
   company = () => this.site()?.company ?? 'FXR Fluxora';
   discord = () => this.site()?.discord ?? '';
+
+  /** Preview build only: switch between the member's and the owner's view. */
+  viewAs(p: 'member' | 'owner'): void {
+    if (!this.demo) return;
+    this.demo.setPersona(p);
+    this.session.refresh();
+    void this.router.navigateByUrl(p === 'owner' ? '/' + this.demo.panelPath : '/account');
+  }
 }

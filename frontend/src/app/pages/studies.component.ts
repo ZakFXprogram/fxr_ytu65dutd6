@@ -17,7 +17,7 @@ import { STUDIES } from '../core/studies';
     <section class="wrap section" style="display:grid;gap:40px">
       @for (s of studies; track s.name) {
         <div class="study">
-          <img [src]="'/studies/' + s.img + '.jpg'" [alt]="s.name" loading="lazy" />
+          <img [src]="'studies/' + s.img + '.jpg'" [alt]="s.name" loading="lazy" />
           <div class="study-txt">
             <span class="tag">{{ s.tag }}</span>
             <h3>{{ s.name }}</h3>

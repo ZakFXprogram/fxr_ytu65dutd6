@@ -23,7 +23,7 @@ import { STUDIES } from '../core/studies';
     </section>
 
     <section class="wrap section">
-      <img src="/studies/deep_trades.jpg" alt="Deep Trades on a chart"
+      <img src="studies/deep_trades.jpg" alt="Deep Trades on a chart"
            style="width:100%;border-radius:16px;border:1px solid var(--line)" />
     </section>
 

@@ -53,7 +53,7 @@ input:focus, select:focus { border-color: var(--v2); box-shadow: 0 0 0 3px rgba(
 .mono { font-family: ui-monospace, Menlo, Consolas, monospace; }
 
 /* header */
-.hdr { position: sticky; top: 0; z-index: 20; backdrop-filter: blur(10px); background: rgba(7,6,11,.72); border-bottom: 1px solid var(--line); }
+.hdr { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; backdrop-filter: blur(10px); background: rgba(7,6,11,.72); border-bottom: 1px solid var(--line); }
 .hdr-in { display: flex; align-items: center; gap: 18px; height: 62px; }
 .hdr-logo { display: flex; align-items: center; gap: 10px; font-weight: 800; }
 .hdr-logo img { width: 34px; height: 34px; border-radius: 9px; box-shadow: 0 0 0 1px var(--line2); }
@@ -177,3 +177,5 @@ th { color: var(--mut); font-weight: 600; font-size: 12.5px; }
 .panel .card { margin-bottom: 20px; }
 .tbl { overflow: auto; }
 @media (max-width: 900px) { .kpi.k4 { grid-template-columns: repeat(2, 1fr); } }
+.demo-bar { background: rgba(251,191,36,.10); border-bottom: 1px solid rgba(251,191,36,.3); color: #f5d68a; font-size: 13px; padding: 7px 0; }
+.demo-bar .btn-xs { padding: 3px 10px; }

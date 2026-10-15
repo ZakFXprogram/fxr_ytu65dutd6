@@ -167,7 +167,7 @@ export class AccountComponent {
   }
 
   copy(text: string): void {
-    void navigator.clipboard?.writeText(text).then(() => this.copied.set(text));
+    void navigator.clipboard?.writeText(text).then(() => this.copied.set(text)).catch(() => undefined);
   }
 
   label(s: string): string {

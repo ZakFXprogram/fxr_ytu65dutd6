@@ -129,7 +129,7 @@ export class CheckoutComponent implements OnDestroy {
   }
 
   copy(text: string): void {
-    void navigator.clipboard?.writeText(text).then(() => this.copied.set(text));
+    void navigator.clipboard?.writeText(text).then(() => this.copied.set(text)).catch(() => undefined);
   }
 
   time(ms: number): string {
