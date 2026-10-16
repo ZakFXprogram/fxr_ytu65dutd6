@@ -133,8 +133,8 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     const id = newId();
     const amount = plan.price.toFixed(2);
     this.db.run(
-      `INSERT INTO orders(id,user_id,plan,amount,pay_to,status,created_ms,expires_ms,updated_ms) VALUES (?,?,?,?,'',?,?,?,?)`,
-      id, userId, planId, amount, ORDER_PENDING, now, now + ORDER_TTL_MS, now,
+      `INSERT INTO orders(id,user_id,plan,amount,pay_to,status,created_ms,expires_ms,updated_ms,terms_ms) VALUES (?,?,?,?,'',?,?,?,?,?)`,
+      id, userId, planId, amount, ORDER_PENDING, now, now + ORDER_TTL_MS, now, now,
     );
     try {
       const inv = await this.np.createInvoice({ orderId: id, amount, description: `FXR OrderFlow - ${plan.label}` });

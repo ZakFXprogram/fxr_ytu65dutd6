@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Headers, HttpCode, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { IsString, Length, Matches } from 'class-validator';
+import { Equals, IsBoolean, IsString, Length, Matches } from 'class-validator';
 import { CurrentAuth, UserGuard } from '../auth/guards';
 import type { AuthContext } from '../auth/auth.service';
 import { OrdersService } from './orders.service';
@@ -9,6 +9,8 @@ import { assertId } from '../common/util';
 
 class CreateOrderDto {
   @IsString() @Length(1, 32) @Matches(/^[a-z0-9]+$/) plan!: string;
+  /** The buyer ticked "I accept the Terms and the Risk disclosure (not investment advice)". */
+  @IsBoolean() @Equals(true, { message: 'Please accept the Terms and the Risk disclosure to continue.' }) acceptTerms!: boolean;
 }
 
 @Controller('api/orders')

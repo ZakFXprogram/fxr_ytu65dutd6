@@ -141,6 +141,7 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
     this.addColumn('orders', 'pay_currency', 'TEXT');
     this.addColumn('orders', 'paid_amount', 'TEXT');
     this.addColumn('orders', 'provider_status', 'TEXT');
+    this.addColumn('orders', 'terms_ms', 'INTEGER'); // when the buyer accepted the Terms and the risk disclosure
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_events_user ON events(user_id)');
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_ms)');
   }
