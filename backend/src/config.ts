@@ -135,8 +135,8 @@ export function loadConfig(): AppConfig {
   }
   if (production) {
     if (cfg.appSecret.length < 32) problems.push('APP_SECRET (32+ chars)');
-    if (!cfg.discord.clientId || !cfg.discord.clientSecret) problems.push('DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET');
-    if (cfg.adminIds.size === 0) problems.push('ADMIN_DISCORD_IDS');
+    // Missing Discord keys or owner ids do not stop the site: sign-in (and so the panel) stays closed until they are set.
+    if (!!cfg.discord.clientId !== !!cfg.discord.clientSecret) problems.push('DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET (set both)');
   }
   if (problems.length) throw new Error('missing/invalid variables: ' + problems.join(', '));
 

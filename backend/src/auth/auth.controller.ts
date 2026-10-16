@@ -1,4 +1,4 @@
-import { Controller, Get, Inject, Logger, Post, Query, Req, Res, ServiceUnavailableException } from '@nestjs/common';
+import { Controller, Get, Inject, Logger, Post, Query, Req, Res } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { AuthService, publicUser } from './auth.service';
@@ -23,7 +23,7 @@ export class AuthController {
   @Throttle({ default: { limit: 20, ttl: 60_000 } })
   @Get('discord')
   start(@Query('next') next: unknown, @Res() res: Response): void {
-    if (!this.discord.configured) throw new ServiceUnavailableException('Discord login is not configured');
+    if (!this.discord.configured) return res.redirect(302, '/dashboard?login=unavailable');
     const state = this.auth.beginLogin(res, next);
     res.redirect(302, this.discord.authorizeUrl(state));
   }

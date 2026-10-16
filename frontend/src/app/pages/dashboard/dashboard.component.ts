@@ -9,6 +9,7 @@ const LOGIN_MESSAGES: Record<string, string> = {
   expired: 'Your sign-in took too long. Please try again.',
   failed: 'Discord could not confirm your sign-in. Please try again.',
   blocked: 'This account is not allowed to sign in. Contact support if you think this is a mistake.',
+  unavailable: 'Sign-in opens very soon. Please come back in a little while.',
 };
 
 /** /dashboard — the member area: sidebar + the page picked in it. */

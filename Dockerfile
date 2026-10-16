@@ -19,15 +19,18 @@ RUN npm run build && npm prune --omit=dev
 
 # 3) Runtime image
 FROM node:22-alpine
-RUN addgroup -S fxr && adduser -S fxr -G fxr
+# su-exec: start as root only to give the mounted volume to the app user, then drop privileges
+RUN apk add --no-cache su-exec && addgroup -S fxr && adduser -S fxr -G fxr
 WORKDIR /app
 COPY --from=backend /be/dist ./dist
 COPY --from=backend /be/node_modules ./node_modules
 COPY --from=backend /be/package.json ./package.json
 # the Angular build is served from /app/public (see app.module frontendDir)
 COPY --from=frontend /fe/dist/frontend/browser ./public
+COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+RUN chmod 755 /usr/local/bin/docker-entrypoint.sh
 ENV NODE_ENV=production
 ENV DATA_DIR=/data
-USER fxr
 EXPOSE 8080
+ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["node", "dist/main.js"]
