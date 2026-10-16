@@ -158,8 +158,8 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
   // ---------- payment notifications
 
   /** NOWPayments IPN. Returns quickly; anything not confirmed now is picked up by the reconcile loop. */
-  async handleIpn(body: Record<string, unknown>, signature: unknown): Promise<void> {
-    if (!this.np.verifySignature(body, signature)) throw new HttpException('bad signature', HttpStatus.UNAUTHORIZED);
+  async handleIpn(body: Record<string, unknown>, signature: unknown, raw?: Buffer): Promise<void> {
+    if (!this.np.verifySignature(body, signature, raw)) throw new HttpException('bad signature', HttpStatus.UNAUTHORIZED);
     const orderId = String(body['order_id'] ?? '');
     const paymentId = String(body['payment_id'] ?? '');
     const o = /^[0-9a-f]{24}$/.test(orderId) ? this.byId(orderId) : undefined;

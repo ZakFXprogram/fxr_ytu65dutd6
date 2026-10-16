@@ -95,12 +95,24 @@ export class NowPaymentsClient {
     };
   }
 
-  /** HMAC-SHA512 of the body with keys sorted, compared in constant time. */
-  verifySignature(body: unknown, signature: unknown): boolean {
+  /**
+   * HMAC-SHA512 with the IPN secret, compared in constant time. NOWPayments' documentation shows the body with its
+   * keys sorted (recursively in the current samples, top-level only in older ones), so both serialisations are
+   * accepted, plus the raw bytes as received. Every variant needs the secret; none weakens the check.
+   */
+  verifySignature(body: unknown, signature: unknown, raw?: Buffer): boolean {
     if (typeof signature !== 'string' || !/^[0-9a-fA-F]{128}$/.test(signature.trim())) return false;
-    if (!body || typeof body !== 'object') return false;
-    const want = createHmac('sha512', this.cfg.nowpayments.ipnSecret).update(JSON.stringify(sortKeys(body))).digest('hex');
-    return safeEqual(signature.trim().toLowerCase(), want);
+    if (!body || typeof body !== 'object' || Array.isArray(body)) return false;
+    const sig = signature.trim().toLowerCase();
+    const mac = (s: string | Buffer) => createHmac('sha512', this.cfg.nowpayments.ipnSecret).update(s).digest('hex');
+    const candidates: (string | Buffer)[] = [
+      JSON.stringify(sortKeys(body)),
+      JSON.stringify(body, Object.keys(body as Record<string, unknown>).sort()),
+    ];
+    if (raw && raw.length) candidates.push(raw);
+    let ok = false;
+    for (const c of candidates) ok = safeEqual(sig, mac(c)) || ok; // check all, no early exit
+    return ok;
   }
 }
 

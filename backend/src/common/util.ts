@@ -19,7 +19,7 @@ export function assertId(id: unknown): string {
 }
 
 /** Where to send the browser after login: only a path on this site, never another host. */
-export function sanitizeNext(n: unknown, fallback = '/account'): string {
+export function sanitizeNext(n: unknown, fallback = '/dashboard'): string {
   if (typeof n !== 'string' || n.length === 0 || n.length > 200) return fallback;
   if (!n.startsWith('/') || n.startsWith('//') || n.startsWith('/api')) return fallback;
   if (n.includes('\\') || /[\x00-\x1f\x7f]/.test(n)) return fallback;

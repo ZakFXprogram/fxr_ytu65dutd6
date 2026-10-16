@@ -1,4 +1,6 @@
-import { Body, Controller, Get, Headers, HttpCode, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, NotFoundException, Param, Post, Req, UseGuards } from '@nestjs/common';
+import type { RawBodyRequest } from '@nestjs/common';
+import type { Request } from 'express';
 import { Throttle } from '@nestjs/throttler';
 import { Equals, IsBoolean, IsString, Length, Matches } from 'class-validator';
 import { CurrentAuth, UserGuard } from '../auth/guards';
@@ -50,9 +52,9 @@ export class NowPaymentsIpnController {
   @Throttle({ default: { limit: 120, ttl: 60_000 } })
   @Post('ipn')
   @HttpCode(200)
-  async ipn(@Body() body: Record<string, unknown>, @Headers('x-nowpayments-sig') sig?: string) {
+  async ipn(@Req() req: RawBodyRequest<Request>, @Body() body: Record<string, unknown>, @Headers('x-nowpayments-sig') sig?: string) {
     if (!this.np.configured) throw new NotFoundException();
-    await this.orders.handleIpn(body, sig);
+    await this.orders.handleIpn(body, sig, req.rawBody);
     return { ok: true };
   }
 }

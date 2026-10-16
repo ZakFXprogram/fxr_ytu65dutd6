@@ -38,9 +38,9 @@ export class AuthController {
     @Res() res: Response,
   ): Promise<void> {
     const next = this.auth.finishLogin(req, res, state);
-    if (!next) return res.redirect(302, '/account?login=expired');
+    if (!next) return res.redirect(302, '/dashboard?login=expired');
     if (error || typeof code !== 'string' || code.length < 8 || code.length > 256) {
-      return res.redirect(302, '/account?login=cancelled');
+      return res.redirect(302, '/dashboard?login=cancelled');
     }
 
     let du;
@@ -50,11 +50,11 @@ export class AuthController {
       this.discord.revoke(token);
     } catch (e) {
       this.log.warn(`login failed: ${(e as Error).message}`);
-      return res.redirect(302, '/account?login=failed');
+      return res.redirect(302, '/dashboard?login=failed');
     }
 
     const user = this.auth.upsertUser(du);
-    if (user.banned) return res.redirect(302, '/account?login=blocked');
+    if (user.banned) return res.redirect(302, '/dashboard?login=blocked');
 
     const listed = this.auth.isAdminId(user.id);
     const admin = listed && (du.mfa_enabled === true || !this.cfg.requireAdminMfa);
