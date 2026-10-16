@@ -151,7 +151,7 @@ export class HomeComponent {
   ];
   steps = [
     { t: 'Sign in with Discord', d: 'Your licence lives on your Discord account. No password to create, nothing to remember.' },
-    { t: 'Pay in USDT', d: 'NOWPayments shows the amount and address. The payment is confirmed on its own, no form to fill.' },
+    { t: 'Pay in USDT', d: 'Send the exact amount shown to our TRON address. The blockchain confirms it, your access turns on by itself.' },
     { t: 'Install from Discord', d: 'Your role unlocks the install channel: download FXR Loader, paste your key from the dashboard, done.' },
   ];
 }

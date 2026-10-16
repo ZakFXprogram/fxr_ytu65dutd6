@@ -7,9 +7,8 @@ import { SessionService } from '../core/session.service';
 import { SiteService } from '../core/site.service';
 import { IconComponent } from '../core/icon.component';
 import { STUDIES } from '../core/studies';
-import { demoApi } from '../core/demo/demo-setup';
 
-/** /buy/:plan — order summary, acceptance of the Terms and Risk disclosure, then the hosted checkout. */
+/** /buy/:plan — order summary and acceptance of the Terms and Risk disclosure, then the payment page. */
 @Component({
   selector: 'app-buy',
   imports: [RouterLink, FormsModule, IconComponent],
@@ -34,7 +33,7 @@ import { demoApi } from '../core/demo/demo-setup';
             <div class="spread"><h3 style="margin:0">FXR Bundle — {{ p.label }}</h3><span class="pill pending">All {{ studies.length }} studies</span></div>
             <div class="kv" style="margin-top:14px"><span class="mut">Access</span><span>{{ p.lifetime ? 'Lifetime' : p.days + ' days, added to any time you have left' }}</span></div>
             <div class="kv"><span class="mut">Account</span><span>{{ session.user()?.name }} (Discord)</span></div>
-            <div class="kv"><span class="mut">Payment</span><span>USDT (TRC20) via NOWPayments</span></div>
+            <div class="kv"><span class="mut">Payment</span><span>USDT on TRON (TRC20), straight to us</span></div>
             <div class="kv"><span class="mut">Total</span><b class="disp num" style="font-size:22px">{{ p.price }} USDT</b></div>
             <ul class="checks" style="margin-top:18px">
               <li>Licence and Discord role activate automatically once the payment is confirmed</li>
@@ -50,10 +49,10 @@ import { demoApi } from '../core/demo/demo-setup';
               <span>I have read and accept the <a routerLink="/legal/terms" target="_blank">Terms of Service</a>, the <a routerLink="/legal/refunds" target="_blank">Refund policy</a> and the <a routerLink="/legal/risk" target="_blank">Risk disclosure</a>. I understand the studies are analysis tools, not investment advice, and that trading involves a substantial risk of loss.</span>
             </label>
             <button class="btn btn-primary btn-block" style="margin-top:20px" [disabled]="!accepted || busy()" (click)="pay(p.id)">
-              {{ busy() ? 'Opening the secure checkout…' : 'Continue to secure payment' }} <app-icon name="arrow" />
+              {{ busy() ? 'Preparing your payment…' : 'Continue to payment' }} <app-icon name="arrow" />
             </button>
             @if (error()) { <p class="err small" style="margin:12px 0 0">{{ error() }}</p> }
-            <p class="help" style="margin-top:14px">You will pay on NOWPayments' checkout page, which shows the exact amount and address and detects the payment by itself. Only send USDT on the TRON (TRC20) network. We never ask for your seed phrase or private key.</p>
+            <p class="help" style="margin-top:14px">The next page shows the exact amount to send and our TRON address, with a QR code. Your payment is detected on the blockchain by itself, no middleman. Only send USDT on the TRON (TRC20) network. We never ask for your seed phrase or private key.</p>
           </div>
         </div>
        } @else if (site.info()) {
@@ -80,10 +79,7 @@ export class BuyComponent {
     this.busy.set(true);
     this.error.set('');
     this.api.createOrder(planId, true).subscribe({
-      next: (o) => {
-        if (demoApi || !o.checkoutUrl) return void this.router.navigate(['/checkout', o.id]);
-        window.location.href = o.checkoutUrl; // NOWPayments' hosted checkout
-      },
+      next: (o) => void this.router.navigate(['/checkout', o.id]),
       error: (e: HttpErrorResponse) => {
         this.busy.set(false);
         if (e.status === 401) this.session.refresh();

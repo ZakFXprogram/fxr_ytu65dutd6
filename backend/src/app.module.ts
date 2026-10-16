@@ -14,8 +14,8 @@ import { PublicController } from './public/public.controller';
 import { LoaderController } from './licences/loader.controller';
 import { AuthController } from './auth/auth.controller';
 import { AccountController } from './account/account.controller';
-import { NowPaymentsIpnController, OrdersController } from './orders/orders.controller';
-import { NowPaymentsClient } from './payments/nowpayments.client';
+import { OrdersController, PaymentsController } from './orders/orders.controller';
+import { TronClient } from './payments/tron.client';
 import { RoleSyncService } from './roles/role-sync.service';
 import { CodesService } from './codes/codes.service';
 import { AdminService } from './admin/admin.service';
@@ -35,7 +35,7 @@ import { AdminController } from './admin/admin.controller';
     AuthController,
     AccountController,
     OrdersController,
-    NowPaymentsIpnController,
+    PaymentsController,
     LoaderController,
     AdminController,
   ],
@@ -44,7 +44,7 @@ import { AdminController } from './admin/admin.controller';
     DbService,
     LicencesService,
     OrdersService,
-    NowPaymentsClient,
+    TronClient,
     RoleSyncService,
     CodesService,
     AdminService,

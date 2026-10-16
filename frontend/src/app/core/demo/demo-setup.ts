@@ -9,6 +9,8 @@ export interface DemoApi {
   panelPath: string;
   /** Preview only: plays a payment (detected, then confirmed) for an order. */
   simulatePayment?(orderId: string): void;
+  /** Preview only: QR code of the (deliberately invalid) sample address. */
+  qrUrl?: string;
 }
 
 export const DEMO = false;

@@ -53,7 +53,7 @@ import { FAQ } from './faq.data';
         <div class="card" fxrSpot fxrReveal="90">
           <div class="why-ico"><app-icon name="card" /></div>
           <h3 style="margin:16px 0 6px">USDT on TRON</h3>
-          <p class="mut" style="margin:0">NOWPayments' checkout shows the amount and address and detects the payment by itself. No transaction ID to paste.</p>
+          <p class="mut" style="margin:0">You send an exact amount straight to our wallet, no middleman and no fees on our side. The payment is read from the blockchain by itself.</p>
         </div>
         <div class="card" fxrSpot fxrReveal="180">
           <div class="why-ico"><app-icon name="bolt" /></div>

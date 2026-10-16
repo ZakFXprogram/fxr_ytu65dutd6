@@ -7,7 +7,8 @@ import { mergeMap } from 'rxjs/operators';
 type Persona = 'visitor' | 'member' | 'owner';
 interface User { id: string; name: string; username: string; banned: boolean; owner: boolean; joined: number; lastLogin: number; role: boolean; inServer: boolean | null }
 interface Lic { id: string; userId: string; plan: string; status: string; start: number; end: number; machine: boolean; keySet: number; moved: number; lastSeen: number | null; source: string }
-interface Ord { id: string; userId: string; plan: string; amount: string; status: string; providerStatus: string | null; payCurrency: string | null; paidAmount: string | null; invoiceId: string | null; paymentId: string | null; note: string | null; created: number; updated: number; paidAt: number | null; decidedBy: string | null }
+interface Ord { id: string; userId: string; plan: string; amount: string; status: string; expected: number; received: number | null; txid: string | null; claimedTxid: string | null; payer: string | null; paidTx: number | null; expires: number; note: string | null; created: number; updated: number; paidAt: number | null; decidedBy: string | null }
+interface Tr { txid: string; from: string; value: number; at: number; status: 'matched' | 'unmatched' | 'ignored'; orderId: string | null; note: string | null; seen: number; decidedBy: string | null }
 interface Code { id: string; hint: string; raw: string; plan: string; days: number; status: string; batch: string | null; created: number; usedBy: string | null; usedAt: number | null }
 interface Ev { id: number; at: number; kind: string; text: string; userId: string | null }
 interface Sess { id: string; userId: string; device: string; created: number; lastSeen: number; expires: number; current: boolean }
@@ -32,6 +33,17 @@ const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
 const pick = <T>(a: T[]) => a[Math.floor(rnd() * a.length)];
 const hex = (n: number) => Array.from({ length: n * 2 }, () => '0123456789abcdef'[Math.floor(rnd() * 16)]).join('');
 const id = () => hex(12);
+/** Deliberately NOT a valid TRON address (0 and O are not base58): no wallet accepts it, nothing can be sent to it. */
+export const DEMO_ADDRESS = 'TDEMO0NLY0NOT0A0REAL0ADDRESS000000';
+const USDT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+const B58 = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
+const fakeWallet = () => 'T' + Array.from({ length: 33 }, () => B58[Math.floor(rnd() * 58)]).join('');
+const usdt = (m: number | null, dp = 2) => {
+  if (m === null) return null;
+  let f = String(m % 1_000_000).padStart(6, '0').replace(/0+$/, '');
+  if (f.length < dp) f = f.padEnd(dp, '0');
+  return `${Math.floor(m / 1_000_000)}.${f}`;
+};
 const group = () => Array.from({ length: 4 }, () => ALPHA[Math.floor(Math.random() * 32)]).join('');
 
 class Store {
@@ -40,6 +52,7 @@ class Store {
   users: User[] = [];
   lics: Lic[] = [];
   orders: Ord[] = [];
+  transfers: Tr[] = [];
   codes: Code[] = [];
   events: Ev[] = [];
   sessions: Sess[] = [];
@@ -64,19 +77,27 @@ class Store {
       const roll = rnd();
       const status = i < 2 ? 'partially_paid' : i < 3 ? 'review' : i < 6 ? 'pending' : roll < 0.08 ? 'expired' : roll < 0.12 ? 'cancelled' : 'paid';
       const price = plan(p)!.price;
+      const expected = this.uniqueAmount(price);
+      const paidLike = status === 'paid' || status === 'partially_paid' || status === 'review';
+      const viaClaim = status === 'paid' && rnd() < 0.15;
+      const received = status === 'paid' ? (viaClaim ? price * 1_000_000 : expected) : status === 'partially_paid' ? (price - 1.5) * 1_000_000 : status === 'review' ? expected : null;
+      const expires = status === 'pending' ? t + 20 * 60_000 : created + 30 * 60_000;
       const o: Ord = {
-        id: id(), userId: u.id, plan: p, amount: price.toFixed(2), status,
-        providerStatus: status === 'paid' ? 'finished' : status === 'partially_paid' ? 'partially_paid' : status === 'review' ? 'finished' : status === 'pending' ? 'waiting' : null,
-        payCurrency: status === 'expired' || status === 'cancelled' ? null : 'usdttrc20',
-        paidAmount: status === 'paid' ? price.toFixed(2) : status === 'partially_paid' ? (price - 1.5).toFixed(2) : status === 'review' ? price.toFixed(2) : null,
-        invoiceId: String(4800000 + i), paymentId: status === 'pending' || status === 'expired' || status === 'cancelled' ? null : String(6100000000 + i),
-        note: status === 'partially_paid' ? 'customer sent less than the invoice amount' : status === 'review' ? 'price mismatch (7.5 usd)' : null,
-        created, updated: created + 600_000, paidAt: status === 'paid' ? created + 420_000 : null, decidedBy: status === 'paid' ? 'nowpayments' : null,
+        id: id(), userId: u.id, plan: p, amount: price.toFixed(2), status: status === 'pending' ? 'pending' : status,
+        expected, received, txid: paidLike ? hex(32) : null, claimedTxid: null, payer: paidLike ? fakeWallet() : null,
+        paidTx: paidLike ? created + 300_000 : null, expires,
+        note: status === 'partially_paid' ? `received ${(price - 1.5).toFixed(2)} USDT of ${price.toFixed(2)}` : status === 'review' ? 'paid after it was cancelled' : viaClaim ? 'matched by transaction id' : null,
+        created: status === 'pending' ? t - 10 * 60_000 : created, updated: created + 600_000, paidAt: status === 'paid' ? created + 360_000 : null, decidedBy: status === 'paid' ? 'blockchain' : null,
       };
+      if (o.txid) this.transfers.push({ txid: o.txid, from: o.payer!, value: o.received!, at: o.paidTx!, status: 'matched', orderId: o.id, note: null, seen: o.paidTx! + 20_000, decidedBy: null });
       this.orders.push(o);
       if (status === 'paid') this.grant(u.id, p, 'order', o.paidAt!, false);
     }
     this.orders.sort((a, b) => b.created - a.created);
+    for (const [v, ago] of [[24_000_000, 2 * 3600_000], [13_370_000, 26 * 3600_000], [8_000_000, 3 * DAY]] as const) {
+      this.transfers.push({ txid: hex(32), from: fakeWallet(), value: v, at: t - ago, status: 'unmatched', orderId: null, note: null, seen: t - ago + 20_000, decidedBy: null });
+    }
+    this.transfers.sort((a, b) => b.at - a.at);
     for (const u of this.users) u.role = this.active(u.id) && u.inServer !== false;
     // a few redeem keys
     for (let i = 0; i < 12; i++) {
@@ -86,8 +107,8 @@ class Store {
     }
     // activity
     for (const o of [...this.orders].reverse()) {
-      this.log('order', `Order ${o.id.slice(0, 8).toUpperCase()} opened: ${plan(o.plan)!.label}, ${o.amount} USD`, o.userId, o.created);
-      if (o.status === 'paid') this.log('paid', `Payment confirmed for order ${o.id.slice(0, 8).toUpperCase()} (${o.amount} USD)`, o.userId, o.paidAt!);
+      this.log('order', `Order ${o.id.slice(0, 8).toUpperCase()} opened: ${plan(o.plan)!.label}, ${usdt(o.expected, 4)} USDT`, o.userId, o.created);
+      if (o.status === 'paid') this.log('paid', `Payment confirmed for order ${o.id.slice(0, 8).toUpperCase()}: ${o.amount} USDT (${usdt(o.received)} USDT received)`, o.userId, o.paidAt!);
       if (o.status === 'partially_paid' || o.status === 'review') this.log('attention', `Order ${o.id.slice(0, 8).toUpperCase()} set aside for review: ${o.note}`, o.userId, o.updated);
     }
     this.events.sort((a, b) => b.at - a.at);
@@ -133,16 +154,32 @@ class Store {
     return 'unchanged';
   }
 
+  /** price + n x 0.0001 USDT, unique among the demo orders (same rule as the server). */
+  uniqueAmount(price: number): number {
+    const base = Math.round(price * 1_000_000);
+    const taken = new Set(this.orders.map((o) => o.expected));
+    for (let k = 0; k < 400; k++) {
+      const a = base + (1 + Math.floor(rnd() * 99)) * 100;
+      if (!taken.has(a)) return a;
+    }
+    return base + 9900;
+  }
+
+  /** Preview: the buyer's payment arrives on the (pretend) blockchain. */
   pay(orderId: string): void {
     const o = this.orders.find((x) => x.id === orderId);
     if (!o || o.status !== 'pending') return;
-    o.status = 'confirming'; o.providerStatus = 'confirming'; o.paymentId = String(6200000000 + Math.floor(Math.random() * 1e6)); o.payCurrency = 'usdttrc20';
-    setTimeout(() => {
-      o.status = 'paid'; o.providerStatus = 'finished'; o.paidAmount = o.amount; o.paidAt = now(); o.decidedBy = 'nowpayments';
-      this.grant(o.userId, o.plan, 'order');
-      this.log('paid', `Payment confirmed for order ${o.id.slice(0, 8).toUpperCase()} (${o.amount} USD)`, o.userId);
-      this.syncRole(o.userId);
-    }, 3500);
+    setTimeout(() => this.settle(o, hex(32), o.expected, 'blockchain', null), 2500);
+  }
+
+  settle(o: Ord, txid: string, value: number, by: string, note: string | null): void {
+    if (o.status === 'paid') return;
+    o.status = 'paid'; o.txid = txid; o.claimedTxid = null; o.received = value; o.payer = fakeWallet(); o.paidTx = now() - 20_000;
+    o.paidAt = now(); o.decidedBy = by; o.note = note ?? o.note; o.updated = now();
+    this.transfers.unshift({ txid, from: o.payer, value, at: o.paidTx, status: 'matched', orderId: o.id, note: null, seen: now(), decidedBy: null });
+    this.grant(o.userId, o.plan, 'order');
+    this.log('paid', `Payment confirmed for order ${o.id.slice(0, 8).toUpperCase()}: ${o.amount} USDT (${usdt(value)} USDT received)`, o.userId);
+    this.syncRole(o.userId);
   }
 
   // ---- views
@@ -151,10 +188,23 @@ class Store {
     return { id: l.id, plan: l.plan, planLabel: plan(l.plan)?.label ?? l.plan, status: this.eff(l), lifetime: l.end === 0, expiresAt: l.end, activated: l.machine, keySetAt: l.keySet, canMove: l.machine && now() >= next, nextMoveAt: now() >= next ? 0 : next };
   }
   ordView(o: Ord) {
-    return { id: o.id, plan: o.plan, planLabel: plan(o.plan)?.label ?? o.plan, amount: o.amount, currency: 'USD', payCurrency: o.payCurrency, status: o.status, checkoutUrl: o.status === 'pending' ? 'demo:pay' : null, createdAt: o.created, paidAt: o.paidAt };
+    if (o.status === 'pending' && o.expires <= now()) o.status = 'expired';
+    const payable = ['pending', 'confirming', 'expired'].includes(o.status);
+    return {
+      id: o.id, plan: o.plan, planLabel: plan(o.plan)?.label ?? o.plan, amount: o.amount, currency: 'USDT', status: o.status,
+      createdAt: o.created, expiresAt: o.expires, paidAt: o.paidAt,
+      pay: payable ? { address: DEMO_ADDRESS, amount: usdt(o.expected, 4)!, network: 'TRON (TRC20)', token: 'USDT', contract: USDT } : null,
+      txid: o.txid ?? o.claimedTxid, received: usdt(o.received), canClaim: payable,
+    };
   }
   adminOrder(o: Ord) {
-    return { ...this.ordView(o), userId: o.userId, userName: this.user(o.userId)?.name ?? null, providerStatus: o.providerStatus, paidAmount: o.paidAmount, invoiceId: o.invoiceId, paymentId: o.paymentId, note: o.note, updatedAt: o.updated, decidedBy: o.decidedBy };
+    return {
+      ...this.ordView(o), userId: o.userId, userName: this.user(o.userId)?.name ?? null, expected: usdt(o.expected, 4), received: usdt(o.received),
+      txid: o.txid, claimedTxid: o.claimedTxid, payer: o.payer, paidTxAt: o.paidTx, expiresAt: o.expires, note: o.note, updatedAt: o.updated, decidedBy: o.decidedBy,
+    };
+  }
+  trView(x: Tr) {
+    return { txid: x.txid, from: x.from, amount: usdt(x.value)!, paidAt: x.at, status: x.status, orderId: x.orderId, note: x.note, seenAt: x.seen, decidedBy: x.decidedBy };
   }
   adminLic(l: Lic) {
     return { id: l.id, userId: l.userId, userName: this.user(l.userId)?.name ?? null, plan: l.plan, planLabel: plan(l.plan)?.label ?? l.plan, status: this.eff(l), lifetime: l.end === 0, startedAt: l.start, expiresAt: l.end, activated: l.machine, keySet: !!l.keySet, lastSeenAt: l.lastSeen, source: l.source, role: !!this.user(l.userId)?.role };
@@ -231,12 +281,16 @@ function handle(method: string, path: string, q: URLSearchParams, body: Record<s
           stats: {
             activeLicences: act.length, lifetime: act.filter((l) => l.end === 0).length, expiring7: act.filter((l) => l.end && l.end - t < 7 * DAY).length,
             members: s.users.length, newMembers7: s.users.filter((u) => u.joined > t - 7 * DAY).length,
-            attention: s.orders.filter((o) => ['review', 'partially_paid', 'refunded'].includes(o.status)).length,
-            inProgress: s.orders.filter((o) => ['pending', 'confirming'].includes(o.status) && o.paymentId).length,
+            attention: s.orders.filter((o) => ['review', 'partially_paid', 'refunded'].includes(o.status)).length + s.transfers.filter((x) => x.status === 'unmatched').length,
+            unmatched: s.transfers.filter((x) => x.status === 'unmatched').length,
+            inProgress: s.orders.filter((o) => ['pending', 'confirming'].includes(o.status)).length,
             unusedCodes: s.codes.filter((c) => c.status === 'unused').length,
           },
           planMix: [...mix.entries()].sort((a, b) => b[1] - a[1]).map(([plan, count]) => ({ plan, count })),
-          checkout: { provider: 'NOWPayments', configured: true, payCurrency: 'usdttrc20' },
+          checkout: {
+            provider: 'Direct to your wallet (TRON)', configured: true, payCurrency: 'USDT (TRC20)', address: DEMO_ADDRESS, sources: ['api.trongrid.io'],
+            windowMinutes: 30, lastOkAt: t - 12_000, lastError: null, lastErrorAt: null, addressChangedAt: null,
+          },
           roleSync: true,
         };
       }
@@ -244,16 +298,36 @@ function handle(method: string, path: string, q: URLSearchParams, body: Record<s
         const st = q.get('status') ?? '';
         const rows = s.orders.filter((o) =>
           (!st || (st === 'attention' ? ['review', 'partially_paid', 'refunded'].includes(o.status) : st === 'open' ? ['pending', 'confirming'].includes(o.status) : o.status === st)) &&
-          (!q.get('plan') || o.plan === q.get('plan')) && matches(q, o.id, o.userId, s.user(o.userId)?.name, s.user(o.userId)?.username, o.paymentId, o.amount));
+          (!q.get('plan') || o.plan === q.get('plan')) && matches(q, o.id, o.userId, s.user(o.userId)?.name, s.user(o.userId)?.username, o.txid, o.payer, usdt(o.expected, 4)));
         return page(rows.map((o) => s.adminOrder(o)), q);
       }
       case 'POST orders/recheck': { const o = s.orders.find((x) => x.id === body['id']) ?? fail(404); return { status: (o as Ord).status }; }
+      case 'GET transfers': {
+        const st = q.get('status') ?? '';
+        const rows = s.transfers.filter((x) => (st === 'all' ? true : st ? x.status === st : x.status === 'unmatched') && matches(q, x.txid, x.from, x.orderId, usdt(x.value)));
+        return page(rows.map((x) => ({ ...s.trView(x), id: x.txid })), q);
+      }
+      case 'POST transfers/assign': {
+        const x = (s.transfers.find((y) => y.txid === body['txid']) ?? fail(404, 'Unknown transaction.')) as Tr;
+        if (x.status !== 'unmatched') fail(409, 'This payment is already matched or ignored.');
+        const ref = String(body['orderId'] ?? '').toLowerCase();
+        const o = (s.orders.find((y) => y.id.startsWith(ref) && ref.length >= 8) ?? fail(404, 'Unknown order.')) as Ord;
+        if (o.status === 'paid') fail(409, 'This order is already paid.');
+        s.transfers = s.transfers.filter((y) => y !== x);
+        s.settle(o, x.txid, x.value, OWNER, `payment of ${usdt(x.value)} USDT assigned by the owner`);
+        return { status: 'paid' };
+      }
+      case 'POST transfers/ignore': {
+        const x = (s.transfers.find((y) => y.txid === body['txid'] && y.status === 'unmatched') ?? fail(404, 'This payment is not waiting for a decision.')) as Tr;
+        x.status = 'ignored'; x.note = String(body['note'] ?? '') || 'set aside by the owner'; x.decidedBy = OWNER;
+        return { ok: true };
+      }
       case 'POST orders/mark-paid': {
         const o = (s.orders.find((x) => x.id === body['id']) ?? fail(404)) as Ord;
         if (o.status === 'paid') fail(409, 'This order is already paid.');
         o.status = 'paid'; o.paidAt = t; o.decidedBy = OWNER; o.note = String(body['note'] ?? '') || 'confirmed manually by the owner';
         s.grant(o.userId, o.plan, 'order'); s.syncRole(o.userId);
-        s.log('paid', `Payment confirmed for order ${o.id.slice(0, 8).toUpperCase()} (${o.amount} USD)`, o.userId);
+        s.log('paid', `Payment confirmed for order ${o.id.slice(0, 8).toUpperCase()}: ${o.amount} USDT`, o.userId);
         return { status: 'paid' };
       }
       case 'POST orders/cancel': {
@@ -392,15 +466,30 @@ function handle(method: string, path: string, q: URLSearchParams, body: Record<s
     if (method === 'POST' && path === 'orders') {
       if (body['acceptTerms'] !== true) fail(400, 'Please accept the Terms and the Risk disclosure to continue.');
       const p = (plan(String(body['plan'])) ?? fail(404, 'Unknown plan')) as typeof PLANS[0];
-      const o: Ord = { id: hex(12), userId: uid!, plan: p.id, amount: p.price.toFixed(2), status: 'pending', providerStatus: null, payCurrency: null, paidAmount: null, invoiceId: String(4900000 + s.orders.length), paymentId: null, note: null, created: t, updated: t, paidAt: null, decidedBy: null };
+      const same = s.orders.find((x) => x.userId === uid && x.plan === p.id && x.status === 'pending' && x.expires > t + 10 * 60_000);
+      if (same) return s.ordView(same);
+      const o: Ord = {
+        id: hex(12), userId: uid!, plan: p.id, amount: p.price.toFixed(2), status: 'pending', expected: s.uniqueAmount(p.price), received: null, txid: null,
+        claimedTxid: null, payer: null, paidTx: null, expires: t + 30 * 60_000, note: null, created: t, updated: t, paidAt: null, decidedBy: null,
+      };
       s.orders.unshift(o);
-      s.log('order', `Order ${o.id.slice(0, 8).toUpperCase()} opened: ${p.label}, ${o.amount} USD`, uid);
+      s.log('order', `Order ${o.id.slice(0, 8).toUpperCase()} opened: ${p.label}, ${usdt(o.expected, 4)} USDT`, uid);
       return s.ordView(o);
     }
     if (seg[0] === 'orders' && seg[1]) {
       const o = (s.orders.find((x) => x.id === seg[1] && x.userId === uid) ?? fail(404)) as Ord;
       if (method === 'GET') return s.ordView(o);
-      if (seg[2] === 'cancel') { if (o.status !== 'pending') fail(409, 'Only an order that has not been paid can be cancelled.'); o.status = 'cancelled'; return s.ordView(o); }
+      if (seg[2] === 'cancel') { if (o.status !== 'pending') fail(409, 'Only an order waiting for its payment can be cancelled.'); o.status = 'cancelled'; return s.ordView(o); }
+      if (seg[2] === 'txid') {
+        const tx = String(body['txid'] ?? '').trim().toLowerCase().replace(/^0x/, '');
+        if (!/^[0-9a-f]{64}$/.test(tx)) fail(400, 'A transaction id (hash) is 64 characters: 0-9 and a-f.');
+        if (!['pending', 'expired', 'confirming'].includes(o.status)) fail(409, 'This order cannot take a payment anymore. Contact support on Discord.');
+        if (s.orders.some((x) => x.id !== o.id && (x.txid === tx || x.claimedTxid === tx))) fail(409, 'This transaction is already attached to another order.');
+        o.claimedTxid = tx; o.status = 'confirming'; o.updated = t;
+        s.log('order', `Transaction ${tx.slice(0, 10)}… given for order ${o.id.slice(0, 8).toUpperCase()}`, uid);
+        setTimeout(() => s.settle(o, tx, Math.round(Number(o.amount) * 1_000_000), 'blockchain', 'matched by transaction id'), 3000);
+        return s.ordView(o);
+      }
     }
   }
   return fail(404);

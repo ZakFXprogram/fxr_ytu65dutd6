@@ -17,8 +17,8 @@ const PAD_T = 10;
       <div class="kpis">
         <div class="card kpi"><div class="k">Revenue, 30 days</div><div class="v"><span [fxrCount]="o.revenue.last30" [decimals]="0"></span> <small class="mut" style="font:700 13px var(--body);margin-left:4px">USDT</small></div><div class="s">{{ o.revenue.orders30 }} paid orders · {{ fmt.usd(o.revenue.today) }} today</div></div>
         <div class="card kpi"><div class="k">Active licences</div><div class="v" [fxrCount]="o.stats.activeLicences"></div><div class="s">{{ o.stats.lifetime }} lifetime · {{ o.stats.expiring7 }} expire within 7 days</div></div>
-        <button class="card kpi" style="text-align:left;font:inherit;color:inherit;cursor:pointer" [class.hot]="o.stats.attention > 0" (click)="go.emit({ view: 'orders', status: 'attention' })">
-          <div class="k">Needs attention</div><div class="v">{{ o.stats.attention }}</div><div class="s">{{ o.stats.inProgress }} payments in progress →</div>
+        <button class="card kpi" style="text-align:left;font:inherit;color:inherit;cursor:pointer" [class.hot]="o.stats.attention > 0" (click)="o.stats.attention > 0 && o.stats.attention === o.stats.unmatched ? go.emit({ view: 'payments' }) : go.emit({ view: 'orders', status: 'attention' })">
+          <div class="k">Needs attention</div><div class="v">{{ o.stats.attention }}</div><div class="s">{{ o.stats.unmatched }} to assign · {{ o.stats.inProgress }} waiting for payment →</div>
         </button>
         <div class="card kpi"><div class="k">Members</div><div class="v" [fxrCount]="o.stats.members"></div><div class="s">+{{ o.stats.newMembers7 }} in 7 days · {{ o.stats.unusedCodes }} unused keys</div></div>
       </div>
@@ -52,9 +52,21 @@ const PAD_T = 10;
             </div>
           </div>
           <div class="card">
-            <h3 style="margin:0 0 10px">Setup</h3>
-            <div class="kv small"><span class="mut">Checkout</span><span [class.ok]="o.checkout.configured" [class.err]="!o.checkout.configured">{{ o.checkout.provider }} · {{ o.checkout.configured ? 'on' : 'not configured' }}</span></div>
-            <div class="kv small"><span class="mut">Currency</span><span class="mono">{{ o.checkout.payCurrency || 'customer\\'s choice' }}</span></div>
+            <h3 style="margin:0 0 10px">Payments</h3>
+            @if (recentChange()) {
+              <div class="errbox small" style="margin-bottom:10px"><b>The receiving address changed {{ fmt.ago(o.checkout.addressChangedAt) }}.</b> If you did not change it yourself, stop sales and check your Railway variables and accounts now.</div>
+            }
+            <div class="kv small"><span class="mut">Checkout</span><span [class.ok]="o.checkout.configured" [class.err]="!o.checkout.configured">{{ o.checkout.configured ? 'open' : 'closed: no address set' }}</span></div>
+            <div class="kv small"><span class="mut">Paid in</span><span>{{ o.checkout.payCurrency }}, to your wallet</span></div>
+            @if (o.checkout.address; as a) {
+              <div class="kv small"><span class="mut">Your address</span><span class="mono" style="overflow-wrap:anywhere;text-align:right"><b>{{ a.slice(0, 4) }}</b>{{ a.slice(4, -4) }}<b>{{ a.slice(-4) }}</b></span></div>
+            }
+            <div class="kv small"><span class="mut">Blockchain check</span>
+              @if (watchOk()) { <span class="ok">{{ fmt.ago(o.checkout.lastOkAt) }}</span> }
+              @else { <span class="err" [title]="o.checkout.lastError || ''">{{ o.checkout.lastError ? 'failing: ' + fmt.ago(o.checkout.lastErrorAt) : 'not yet' }}</span> }
+            </div>
+            <div class="kv small"><span class="mut">Sources</span><span class="faint">{{ o.checkout.sources.join(' + ') }}</span></div>
+            <div class="kv small"><span class="mut">To assign</span><button class="linkish" (click)="go.emit({ view: 'payments' })">{{ o.stats.unmatched }} payment{{ o.stats.unmatched === 1 ? '' : 's' }} →</button></div>
             <div class="kv small"><span class="mut">Discord role</span><span [class.ok]="o.roleSync" [class.faint]="!o.roleSync">{{ o.roleSync ? 'synced automatically' : 'off' }}</span></div>
           </div>
         </div>
@@ -107,6 +119,15 @@ export class PanelOverviewComponent {
     const b = this.bars()[i];
     if (!b) return null;
     return { ...b, left: Math.min(78, Math.max(8, ((b.x + b.w / 2) / W) * 100)) };
+  });
+  /** Last successful look at the blockchain is newer than the last failure. */
+  watchOk = computed(() => {
+    const c = this.o()?.checkout;
+    return !!c?.lastOkAt && (!c.lastErrorAt || c.lastOkAt > c.lastErrorAt);
+  });
+  recentChange = computed(() => {
+    const t = this.o()?.checkout.addressChangedAt;
+    return !!t && Date.now() - t < 14 * 86400_000;
   });
   mixMax = computed(() => Math.max(1, ...(this.o()?.planMix ?? []).map((p) => p.count)));
 

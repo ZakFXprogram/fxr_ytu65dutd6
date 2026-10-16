@@ -89,7 +89,7 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
       );
       CREATE INDEX IF NOT EXISTS idx_sess_user ON sessions(user_id);
 
-      -- Orders. Payment is collected by NOWPayments; status follows their notifications (double-checked).
+      -- Orders. Paid in USDT (TRC20) straight to the owner's address; matched from the blockchain (see orders.service).
       CREATE TABLE IF NOT EXISTS orders (
         id TEXT PRIMARY KEY,
         user_id TEXT NOT NULL REFERENCES users(id),
@@ -142,6 +142,32 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
     this.addColumn('orders', 'paid_amount', 'TEXT');
     this.addColumn('orders', 'provider_status', 'TEXT');
     this.addColumn('orders', 'terms_ms', 'INTEGER'); // when the buyer accepted the Terms and the risk disclosure
+    // direct TRON payments
+    this.addColumn('orders', 'base_micro', 'INTEGER'); // plan price in micro-USDT
+    this.addColumn('orders', 'amount_micro', 'INTEGER'); // exact amount asked: price + a unique 0.0001-0.0999
+    this.addColumn('orders', 'claimed_txid', 'TEXT'); // transaction id the buyer gave us (exchanges)
+    this.addColumn('orders', 'claim_ms', 'INTEGER');
+    this.addColumn('orders', 'paid_micro', 'INTEGER'); // what actually arrived
+    this.addColumn('orders', 'payer', 'TEXT'); // sending address (public)
+    this.addColumn('orders', 'paid_tx_ms', 'INTEGER'); // block time of the payment
+    this.db.exec(`
+      -- Every confirmed USDT transfer that reached the receiving address, matched to an order or waiting for the owner.
+      CREATE TABLE IF NOT EXISTS chain_transfers (
+        txid TEXT PRIMARY KEY,
+        from_addr TEXT,
+        value_micro INTEGER NOT NULL,
+        block_ms INTEGER NOT NULL,
+        status TEXT NOT NULL,              -- matched | unmatched | ignored
+        order_id TEXT,
+        note TEXT,
+        seen_ms INTEGER NOT NULL,
+        decided_by TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_ct_status ON chain_transfers(status);
+      CREATE TABLE IF NOT EXISTS meta (k TEXT PRIMARY KEY, v TEXT NOT NULL);
+      CREATE INDEX IF NOT EXISTS idx_orders_amount ON orders(amount_micro);
+      CREATE INDEX IF NOT EXISTS idx_orders_claim ON orders(claimed_txid);
+    `);
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_events_user ON events(user_id)');
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_ms)');
   }
@@ -187,6 +213,14 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
 
   logEvent(kind: string, text: string, userId: string | null = null): void {
     this.run('INSERT INTO events(ts_ms, kind, text, user_id) VALUES (?,?,?,?)', Date.now(), kind, text, userId);
+  }
+
+  getMeta(k: string): string | null {
+    return this.get<{ v: string }>('SELECT v FROM meta WHERE k = ?', k)?.v ?? null;
+  }
+
+  setMeta(k: string, v: string): void {
+    this.run('INSERT INTO meta(k, v) VALUES (?, ?) ON CONFLICT(k) DO UPDATE SET v = excluded.v', k, v);
   }
 
   recentEvents(limit = 50): EventRow[] {

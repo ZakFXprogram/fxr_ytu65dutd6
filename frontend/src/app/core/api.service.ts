@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import {
-  Account, AdminCode, AdminEvent, AdminLicence, AdminMember, AdminOrder, ListQuery, Me, MemberDetail, Order, Overview,
+  Account, AdminCode, AdminEvent, AdminLicence, AdminMember, AdminOrder, AdminTransfer, ListQuery, Me, MemberDetail, Order, Overview,
   Page, Session, SiteInfo,
 } from './models';
 import { PANEL_PATH } from './panel';
@@ -37,6 +37,7 @@ export class ApiService {
   createOrder(plan: string, acceptTerms: boolean): Observable<Order> { return this.http.post<Order>('/api/orders', { plan, acceptTerms }); }
   order(id: string): Observable<Order> { return this.http.get<Order>(`/api/orders/${id}`); }
   cancelOrder(id: string): Observable<Order> { return this.http.post<Order>(`/api/orders/${id}/cancel`, {}); }
+  claimTx(id: string, txid: string): Observable<Order> { return this.http.post<Order>(`/api/orders/${id}/txid`, { txid }); }
 
   // owner panel (its path is only known on the panel page)
   private p(path: string): string { return `/api/${PANEL_PATH}/${path}`; }
@@ -51,6 +52,12 @@ export class ApiService {
   recheckOrder(id: string): Observable<{ status: string }> { return this.http.post<{ status: string }>(this.p('orders/recheck'), { id }); }
   markPaid(id: string, note: string): Observable<{ status: string }> { return this.http.post<{ status: string }>(this.p('orders/mark-paid'), { id, note }); }
   cancelOrders(ids: string[]): Observable<Done> { return this.http.post<Done>(this.p('orders/cancel'), { ids }); }
+  transfers(q: ListQuery): Observable<Page<AdminTransfer & { id: string }>> {
+    return this.http.get<Page<AdminTransfer>>(this.p('transfers'), { params: this.params(q) })
+      .pipe(map((p) => ({ ...p, items: p.items.map((t) => ({ ...t, id: t.txid })) })));
+  }
+  assignTransfer(txid: string, orderId: string): Observable<{ status: string }> { return this.http.post<{ status: string }>(this.p('transfers/assign'), { txid, orderId }); }
+  ignoreTransfer(txid: string, note: string): Observable<{ ok: boolean }> { return this.http.post<{ ok: boolean }>(this.p('transfers/ignore'), { txid, note }); }
   licences(q: ListQuery): Observable<Page<AdminLicence>> { return this.http.get<Page<AdminLicence>>(this.p('licences'), { params: this.params(q) }); }
   grant(userId: string, plan: string, days?: number): Observable<{ id: string }> { return this.http.post<{ id: string }>(this.p('licences/grant'), { userId, plan, days }); }
   extend(ids: string[], days: number): Observable<Done> { return this.http.post<Done>(this.p('licences/extend'), { ids, days }); }

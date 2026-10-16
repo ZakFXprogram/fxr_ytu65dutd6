@@ -108,11 +108,11 @@ import { demoApi } from './core/demo/demo-setup';
 
           <div class="disclaimer">
             <p><strong>Risk disclosure.</strong> Trading futures, forex, options, CFDs and crypto-assets involves a substantial risk of loss and is not suitable for every investor; you can lose more than your initial deposit. FXR OrderFlow studies are analysis software provided for educational and informational purposes only. Nothing on this website, in the software, on our Discord or in any communication from {{ company() }} is investment advice, a recommendation, or an offer or solicitation to buy or sell any financial instrument. We are not a registered investment adviser or broker. Past performance and examples, including screenshots made on simulated data, do not guarantee future results. You alone are responsible for your trading decisions.</p>
-            <p><strong>Payments.</strong> We never ask for your wallet's private key or seed phrase, and we never send payment addresses or links by direct message. Only pay through the checkout opened from this website.</p>
+            <p><strong>Payments.</strong> We never ask for your wallet's private key or seed phrase, and we never send payment addresses or links by direct message. Only pay to the address shown on the payment page opened from this website, and check its first and last 4 characters.</p>
           </div>
           <div class="ftr-base">
             <span>© {{ year }} {{ company() }}. All rights reserved.</span>
-            <span>Not affiliated with MotiveWave, Rithmic, Discord or NOWPayments.</span>
+            <span>Not affiliated with MotiveWave, Rithmic, Discord, Tether or TRON.</span>
           </div>
         </div>
       </footer>

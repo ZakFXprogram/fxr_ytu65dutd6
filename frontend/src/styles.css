@@ -442,3 +442,41 @@ td.r, th.r { text-align: right; }
 .ov-grid { grid-template-columns: minmax(0, 2fr) minmax(0, 1fr); }
 @media (max-width: 1000px) { .ov-grid { grid-template-columns: minmax(0, 1fr); } }
 .pager select { width: auto; padding: 6px 10px; font-size: 13px; border-radius: 9px; }
+
+/* ---------- direct payment (checkout) */
+.paybox { display: grid; grid-template-columns: minmax(0, 1fr) 236px; gap: 22px; align-items: start; }
+@media (max-width: 760px) { .paybox { grid-template-columns: minmax(0, 1fr); } .paybox .qrcol { max-width: 260px; margin: 0 auto; width: 100%; } }
+.payline { display: grid; gap: 7px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.payline:first-child { padding-top: 0; }
+.payline:last-child { border-bottom: 0; padding-bottom: 0; }
+.payline .lbl { font-size: 12px; font-weight: 700; color: var(--faint); text-transform: uppercase; letter-spacing: .09em; display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 12px; }
+.payline .lbl span + span { text-transform: none; letter-spacing: 0; font-weight: 500; font-size: 12.5px; }
+.steps-mini b { color: var(--text); }
+.payval { display: flex; gap: 8px; align-items: stretch; }
+.payval code { flex: 1; min-width: 0; overflow-wrap: anywhere; background: var(--bg2); border: 1px solid var(--line2); border-radius: 11px; padding: 11px 13px; font: 700 15px/1.45 ui-monospace, Menlo, Consolas, monospace; color: var(--text); }
+.payval code.big { font: 800 clamp(22px, 4vw, 30px)/1.2 var(--display); letter-spacing: -.01em; padding: 12px 14px; }
+.payval code .hl { color: var(--buy); }
+.payval code .unit { font: 700 14px var(--body); color: var(--muted); margin-left: 6px; }
+.payval .btn { flex: none; }
+.netchips { display: flex; flex-wrap: wrap; gap: 8px; }
+.netchips span { font-size: 13px; font-weight: 700; padding: 6px 11px; border-radius: 999px; border: 1px solid var(--line2); background: var(--surface2); }
+.netchips span.tron { color: #ff6b6b; border-color: rgba(255, 60, 60, .35); background: rgba(255, 60, 60, .08); }
+.netchips span.usdt { color: #4ade80; border-color: rgba(74, 222, 128, .35); background: rgba(74, 222, 128, .08); }
+.qrcol { display: grid; gap: 12px; }
+.qr { background: #fff; border-radius: 16px; padding: 12px; box-shadow: 0 18px 40px -18px rgba(124, 58, 237, .55); }
+.qr img { width: 100%; aspect-ratio: 1; display: block; image-rendering: pixelated; }
+.timer { display: flex; align-items: center; justify-content: space-between; font-size: 13px; color: var(--muted); }
+.timer b { font: 800 18px var(--display); color: var(--text); font-variant-numeric: tabular-nums; }
+.timer.low b { color: var(--warn); }
+.timebar { height: 4px; background: var(--line2); border-radius: 4px; overflow: hidden; }
+.timebar i { display: block; height: 100%; background: linear-gradient(90deg, var(--v2), var(--buy)); transition: width 1s linear; }
+.watch { display: flex; gap: 10px; align-items: center; font-size: 14px; color: var(--muted); margin-top: 16px; }
+.watch .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--ok); flex: none; box-shadow: 0 0 0 0 rgba(74, 222, 128, .6); animation: pulse 1.6s infinite; }
+.steps-mini { counter-reset: s; display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.steps-mini li { counter-increment: s; display: grid; grid-template-columns: 24px minmax(0, 1fr); gap: 10px; font-size: 14px; color: var(--muted); }
+.steps-mini li::before { content: counter(s); width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font: 800 12px var(--display); color: var(--v3); background: rgba(124, 58, 237, .15); }
+.claim { margin-top: 18px; }
+.claim summary { cursor: pointer; font-weight: 700; color: var(--v3); font-size: 14.5px; }
+.claim form { display: grid; gap: 10px; margin-top: 12px; }
+.claim input { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13.5px; }
+.txlink { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; overflow-wrap: anywhere; }

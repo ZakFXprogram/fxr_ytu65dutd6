@@ -1,8 +1,10 @@
+import { isTronAddress, USDT_CONTRACT } from './payments/tron';
+
 /**
  * Server configuration, read once from the environment (Railway variables). Nothing secret is committed.
  *
- * SECURITY: this service never holds a wallet private key or seed and cannot move funds. Crypto payments are
- * collected by NOWPayments (hosted checkout); their payout goes to the wallet you set in their dashboard.
+ * SECURITY: this service never holds a wallet private key or seed and cannot move funds. Customers pay USDT
+ * (TRC20) straight to the owner's public TRON address; the server only READS the blockchain to see what arrived.
  */
 export interface Plan {
   id: string;
@@ -19,11 +21,18 @@ export interface DiscordConfig {
   apiBase: string;
 }
 
-export interface NowPaymentsConfig {
-  apiKey: string;
-  ipnSecret: string;
+export interface TronConfig {
+  /** Public receiving address ("T..."). Empty = checkout closed. Never a private key. */
+  address: string;
+  /** TronGrid-compatible index used to list incoming USDT transfers. */
   apiBase: string;
-  payCurrency: string; // e.g. usdttrc20 (USDT on TRON)
+  apiKey: string;
+  /** Node whose confirmed ("solidity") API re-checks every transaction. Point it at another provider for an
+   *  independent second source. */
+  nodeUrl: string;
+  nodeApiKey: string;
+  /** Minutes an order's unique amount stays reserved for the customer to pay. */
+  windowMinutes: number;
 }
 
 export interface DiscordBotConfig {
@@ -47,7 +56,7 @@ export interface AppConfig {
   requireAdminMfa: boolean;
   /** Secret URL segment of the panel, e.g. "ops-4k9w2m7q8z1x" -> https://site/ops-4k9w2m7q8z1x */
   adminPath: string;
-  nowpayments: NowPaymentsConfig;
+  tron: TronConfig;
   bot: DiscordBotConfig;
   discordInvite: string;
   supportEmail: string;
@@ -80,9 +89,9 @@ export function loadConfig(): AppConfig {
   // Dev-only overrides so the login flow can be tested against a local mock of Discord.
   const discordWeb = production ? 'https://discord.com' : env('DISCORD_WEB_BASE', 'https://discord.com');
   const discordApi = production ? 'https://discord.com/api/v10' : env('DISCORD_API_BASE', 'https://discord.com/api/v10');
-  const npSandbox = env('NOWPAYMENTS_SANDBOX', 'false') === 'true';
-  const npDefault = npSandbox ? 'https://api-sandbox.nowpayments.io/v1' : 'https://api.nowpayments.io/v1';
-  const npBase = production ? npDefault : env('NOWPAYMENTS_API_BASE', npDefault);
+  const tronApi = env('TRON_API_BASE', 'https://api.trongrid.io').replace(/\/$/, '');
+  const tronNode = env('TRON_NODE_URL', tronApi).replace(/\/$/, '');
+  const tronKey = env('TRONGRID_API_KEY');
 
   const cfg: AppConfig = {
     port,
@@ -106,11 +115,14 @@ export function loadConfig(): AppConfig {
     ),
     requireAdminMfa: env('ADMIN_REQUIRE_MFA', 'true') !== 'false',
     adminPath: env('ADMIN_PATH', production ? '' : 'panel-dev-local-only').toLowerCase(),
-    nowpayments: {
-      apiKey: env('NOWPAYMENTS_API_KEY'),
-      ipnSecret: env('NOWPAYMENTS_IPN_SECRET'),
-      apiBase: npBase,
-      payCurrency: env('NOWPAYMENTS_PAY_CURRENCY', 'usdttrc20').toLowerCase(),
+    tron: {
+      address: env('TRON_RECEIVING_ADDRESS'),
+      apiBase: tronApi,
+      apiKey: tronKey,
+      nodeUrl: tronNode,
+      // the TronGrid key only goes to TronGrid; another provider gets its own key, if any
+      nodeApiKey: env('TRON_NODE_API_KEY', new URL(tronNode).host === new URL(tronApi).host ? tronKey : ''),
+      windowMinutes: Math.min(Math.max(envInt('PAYMENT_WINDOW_MINUTES', 30), 10), 240),
     },
     bot: {
       token: env('DISCORD_BOT_TOKEN'),
@@ -127,8 +139,11 @@ export function loadConfig(): AppConfig {
   if (!/^[a-z0-9][a-z0-9-]{15,63}$/.test(cfg.adminPath) || RESERVED.has(cfg.adminPath))
     problems.push('ADMIN_PATH (16-64 chars: a-z 0-9 -, not a site page)');
   for (const id of cfg.adminIds) if (!/^\d{17,20}$/.test(id)) problems.push(`ADMIN_DISCORD_IDS (bad id "${id}")`);
-  if (cfg.nowpayments.apiKey && !cfg.nowpayments.ipnSecret) problems.push('NOWPAYMENTS_IPN_SECRET (required with NOWPAYMENTS_API_KEY)');
-  if (!/^[a-z0-9]{2,20}$/.test(cfg.nowpayments.payCurrency)) problems.push('NOWPAYMENTS_PAY_CURRENCY');
+  if (cfg.tron.address && !isTronAddress(cfg.tron.address)) problems.push('TRON_RECEIVING_ADDRESS (not a valid TRON address: check every character)');
+  if (cfg.tron.address === USDT_CONTRACT) problems.push('TRON_RECEIVING_ADDRESS (that is the USDT contract, not your wallet)');
+  for (const [k, u] of [['TRON_API_BASE', cfg.tron.apiBase], ['TRON_NODE_URL', cfg.tron.nodeUrl]] as const) {
+    if (production && !u.startsWith('https://')) problems.push(`${k} (https only)`);
+  }
   const b = cfg.bot;
   // The ids can be set before the bot token: role sync starts once all three are present.
   if (b.guildId && !/^\d{17,20}$/.test(b.guildId)) problems.push('DISCORD_GUILD_ID (a number)');

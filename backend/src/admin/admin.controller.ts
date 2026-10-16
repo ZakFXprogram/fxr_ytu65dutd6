@@ -38,6 +38,15 @@ class IdsDto {
 class NoteDto extends IdDto {
   @IsOptional() @IsString() @Length(0, 200) note?: string;
 }
+class TxidDto {
+  @IsString() @Matches(/^[0-9a-f]{64}$/) txid!: string;
+}
+class AssignDto extends TxidDto {
+  @IsString() @Matches(/^[0-9a-fA-F]{8,24}$/, { message: 'Enter the order number (8 characters) or its full id.' }) orderId!: string;
+}
+class IgnoreDto extends TxidDto {
+  @IsOptional() @IsString() @Length(0, 200) note?: string;
+}
 class ExtendDto extends IdsDto {
   @IsInt() @Min(1) @Max(3650) days!: number;
 }
@@ -109,6 +118,23 @@ export class AdminController {
   @Post('orders/cancel')
   cancelOrders(@CurrentAuth() a: AuthContext, @Body() dto: IdsDto) {
     return { done: dto.ids.filter((id) => this.orders.cancelByOwner(id, a.user.id)).length };
+  }
+
+  // ----- payments seen on the blockchain
+  @Get('transfers')
+  listTransfers(@Query() q: ListDto) {
+    return this.admin.listTransfers(q);
+  }
+
+  @Post('transfers/assign')
+  assign(@CurrentAuth() a: AuthContext, @Body() dto: AssignDto) {
+    return { status: this.orders.assignTransfer(dto.txid, dto.orderId, a.user.id).status };
+  }
+
+  @Post('transfers/ignore')
+  ignore(@CurrentAuth() a: AuthContext, @Body() dto: IgnoreDto) {
+    if (!this.orders.ignoreTransfer(dto.txid, a.user.id, dto.note ?? '')) throw new NotFoundException('This payment is not waiting for a decision.');
+    return { ok: true };
   }
 
   // ----- subscriptions

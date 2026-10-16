@@ -13,7 +13,7 @@ export class PublicController {
       company: this.cfg.company,
       discord: this.cfg.discordInvite,
       support: this.cfg.supportEmail,
-      paymentsOpen: !!(this.cfg.nowpayments.apiKey && this.cfg.nowpayments.ipnSecret),
+      paymentsOpen: !!this.cfg.tron.address,
       plans: this.cfg.plans.map((p) => ({
         id: p.id,
         label: p.label,

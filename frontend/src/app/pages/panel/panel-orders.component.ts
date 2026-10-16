@@ -12,7 +12,7 @@ import { ListState, ORDER_LABEL, PagerComponent } from './list';
   imports: [FormsModule, IconComponent, PagerComponent],
   template: `
     <div class="toolbar">
-      <div class="search"><app-icon name="search" /><input id="orders-q" [ngModel]="list.q()" (ngModelChange)="list.search($event)" placeholder="Member, Discord ID, order or payment ID" /></div>
+      <div class="search"><app-icon name="search" /><input id="orders-q" [ngModel]="list.q()" (ngModelChange)="list.search($event)" placeholder="Member, Discord ID, order, txid, sender or exact amount" /></div>
       <select [ngModel]="list.plan()" (ngModelChange)="list.setPlan($event)" aria-label="Plan">
         <option value="">All plans</option>
         @for (p of site.info()?.plans ?? []; track p.id) { <option [value]="p.id">{{ p.label }}</option> }
@@ -28,7 +28,7 @@ import { ListState, ORDER_LABEL, PagerComponent } from './list';
       <table>
         <thead><tr>
           <th style="width:34px"><input type="checkbox" [checked]="list.allSelected()" (change)="list.toggleAll()" aria-label="Select all" /></th>
-          <th>Opened</th><th>Order</th><th>Member</th><th>Plan</th><th class="r">Amount</th><th>Received</th><th>Status</th><th>Provider</th>
+          <th>Opened</th><th>Order</th><th>Member</th><th>Plan</th><th class="r">Asked</th><th class="r">Received</th><th>Status</th><th>Transaction</th>
         </tr></thead>
         <tbody>
           @for (o of list.items(); track o.id) {
@@ -38,10 +38,10 @@ import { ListState, ORDER_LABEL, PagerComponent } from './list';
               <td class="mono small">{{ o.id.slice(0, 8).toUpperCase() }}</td>
               <td><button class="linkish" (click)="$event.stopPropagation(); member.emit(o.userId)">{{ o.userName || o.userId }}</button><span class="sub">{{ o.userId }}</span></td>
               <td>{{ o.planLabel }}</td>
-              <td class="r num">{{ o.amount }}</td>
-              <td class="num small">{{ o.paidAmount ? o.paidAmount + ' ' + cur(o.payCurrency) : '—' }}</td>
+              <td class="r num">{{ o.expected || o.amount }}</td>
+              <td class="r num">{{ o.received || '—' }}</td>
               <td><span class="pill" [class]="o.status">{{ label(o.status) }}</span></td>
-              <td class="small faint">{{ o.providerStatus || '—' }}</td>
+              <td class="small mono faint">{{ (o.txid || o.claimedTxid) ? (o.txid || o.claimedTxid)!.slice(0, 10) + '…' : '—' }}</td>
             </tr>
           } @empty {
             <tr><td colspan="9" class="empty">{{ list.loading() ? 'Loading…' : 'No order matches.' }}</td></tr>
@@ -66,21 +66,26 @@ import { ListState, ORDER_LABEL, PagerComponent } from './list';
           <div><h2>Order {{ o.id.slice(0, 8).toUpperCase() }}</h2><div class="small faint mono" style="user-select:all">{{ o.id }}</div></div>
           <button class="btn btn-ghost btn-xs" (click)="open.set(null)" aria-label="Close"><app-icon name="x" /></button>
         </div>
-        <div class="row" style="margin-top:12px"><span class="pill" [class]="o.status">{{ label(o.status) }}</span>@if (o.providerStatus) { <span class="small faint">NOWPayments: {{ o.providerStatus }}</span> }</div>
+        <div class="row" style="margin-top:12px"><span class="pill" [class]="o.status">{{ label(o.status) }}</span></div>
         <div style="margin-top:14px">
           <div class="kv"><span class="mut">Member</span><button class="linkish" (click)="member.emit(o.userId)">{{ o.userName || o.userId }}</button></div>
           <div class="kv"><span class="mut">Plan</span><span>{{ o.planLabel }}</span></div>
-          <div class="kv"><span class="mut">Price</span><b class="num">{{ o.amount }} USD</b></div>
-          <div class="kv"><span class="mut">Received</span><span class="num">{{ o.paidAmount ? o.paidAmount + ' ' + cur(o.payCurrency) : '—' }}</span></div>
+          <div class="kv"><span class="mut">Price</span><b class="num">{{ o.amount }} USDT</b></div>
+          <div class="kv"><span class="mut">Exact amount asked</span><span class="num mono">{{ o.expected || '—' }}</span></div>
+          <div class="kv"><span class="mut">Received</span><span class="num">{{ o.received ? o.received + ' USDT' : '—' }}</span></div>
           <div class="kv"><span class="mut">Opened</span><span>{{ fmt.dt(o.createdAt) }}</span></div>
-          <div class="kv"><span class="mut">Paid</span><span>{{ fmt.dt(o.paidAt) }}{{ o.decidedBy && o.decidedBy !== 'nowpayments' ? ' (by owner)' : '' }}</span></div>
-          <div class="kv"><span class="mut">Invoice / payment</span><span class="mono small">{{ o.invoiceId || '—' }} / {{ o.paymentId || '—' }}</span></div>
+          <div class="kv"><span class="mut">Window ends</span><span>{{ fmt.dt(o.expiresAt) }}</span></div>
+          <div class="kv"><span class="mut">Paid</span><span>{{ fmt.dt(o.paidAt) }}{{ o.decidedBy && o.decidedBy !== 'blockchain' ? ' (by owner)' : '' }}</span></div>
+          @if (o.payer) { <div class="kv"><span class="mut">Sent from</span><span class="mono small" style="overflow-wrap:anywhere;text-align:right">{{ o.payer }}</span></div> }
+          @if (o.txid || o.claimedTxid; as t) {
+            <div class="kv"><span class="mut">{{ o.txid ? 'Transaction' : 'Transaction given' }}</span><a class="txlink" style="text-align:right" [href]="'https://tronscan.org/#/transaction/' + t" target="_blank" rel="noopener noreferrer">{{ t.slice(0, 14) }}…{{ t.slice(-6) }} <app-icon name="external" /></a></div>
+          }
           @if (o.note) { <div class="kv"><span class="mut">Note</span><span style="text-align:right;white-space:normal">{{ o.note }}</span></div> }
         </div>
         <h3>Actions</h3>
         <div class="stack">
-          @if (o.paymentId && o.status !== 'paid') {
-            <button class="btn btn-ghost btn-sm" [disabled]="busy()" (click)="recheck(o)"><app-icon name="refresh" /> Ask NOWPayments again</button>
+          @if (o.status !== 'paid') {
+            <button class="btn btn-ghost btn-sm" [disabled]="busy()" (click)="recheck(o)"><app-icon name="refresh" /> Check the blockchain now</button>
           }
           @if (o.status !== 'paid' && o.status !== 'cancelled') {
             <div class="card" style="padding:14px">
@@ -93,7 +98,7 @@ import { ListState, ORDER_LABEL, PagerComponent } from './list';
             }
           }
         </div>
-        <p class="help" style="margin-top:16px">Paid orders are confirmed automatically once NOWPayments' API reports them finished for the right amount. Manual actions are written to the activity log.</p>
+        <p class="help" style="margin-top:16px">Orders are paid automatically when a confirmed USDT transfer of their exact amount reaches your address, checked on two blockchain sources. Manual actions are written to the activity log.</p>
       </aside>
     }
   `,
@@ -107,7 +112,6 @@ export class PanelOrdersComponent {
   changed = output<void>();
   fmt = fmt;
   label = (s: string) => ORDER_LABEL[s] ?? s;
-  cur = (c: string | null) => (c === 'usdttrc20' ? 'USDT (TRC20)' : (c ?? '').toUpperCase());
   open = signal<AdminOrder | null>(null);
   busy = signal(false);
   note = '';
@@ -138,7 +142,7 @@ export class PanelOrdersComponent {
   recheck(o: AdminOrder): void {
     this.busy.set(true);
     this.api.recheckOrder(o.id).subscribe({
-      next: (r) => { this.open.set({ ...o, status: r.status as AdminOrder['status'] }); this.after(`NOWPayments says: ${this.label(r.status)}.`); },
+      next: (r) => { this.open.set({ ...o, status: r.status as AdminOrder['status'] }); this.after(`Checked on the blockchain: ${this.label(r.status)}.`); },
       error: (e) => this.fail(e),
     });
   }

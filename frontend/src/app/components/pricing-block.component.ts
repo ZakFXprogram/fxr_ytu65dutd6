@@ -57,7 +57,7 @@ import { Plan } from '../core/models';
           <button class="btn btn-discord btn-block" (click)="signIn()"><app-icon name="lock" /> Sign in with Discord to buy</button>
           <p class="help" style="margin-top:10px">Your licence is linked to your Discord account, so you can get it back from any computer.</p>
         }
-        <p class="help" style="margin-top:12px">Pay with USDT (TRC20) on NOWPayments' secure checkout. Your licence and Discord role activate automatically once the payment is confirmed. <a routerLink="/legal/terms">Terms</a> · <a routerLink="/legal/refunds">Refunds</a></p>
+        <p class="help" style="margin-top:12px">Pay in USDT (TRC20) straight to our wallet, no middleman. Your licence and Discord role activate automatically once the blockchain confirms the payment. <a routerLink="/legal/terms">Terms</a> · <a routerLink="/legal/refunds">Refunds</a></p>
       </div>
     </div>
   `,

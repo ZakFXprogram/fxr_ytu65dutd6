@@ -43,11 +43,11 @@ const LABEL: Record<string, string> = {
                 <td>{{ fmt.date(o.createdAt) }}</td>
                 <td class="mono small">{{ o.id.slice(0, 8).toUpperCase() }}</td>
                 <td>{{ o.planLabel }}</td>
-                <td class="r num">{{ o.amount }} USDT</td>
+                <td class="r num">{{ o.received || o.pay?.amount || o.amount }} USDT</td>
                 <td><span class="pill" [class]="o.status">{{ label(o.status) }}</span></td>
                 <td class="r">
-                  @if (o.status === 'pending' && o.checkoutUrl) { <a [routerLink]="['/checkout', o.id]">Pay</a> }
-                  @else if (o.status !== 'cancelled' && o.status !== 'expired') { <a [routerLink]="['/checkout', o.id]">View</a> }
+                  @if (o.status === 'pending' && o.pay) { <a [routerLink]="['/checkout', o.id]">Pay</a> }
+                  @else if (o.status !== 'cancelled') { <a [routerLink]="['/checkout', o.id]">View</a> }
                 </td>
               </tr>
             } @empty {

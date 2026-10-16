@@ -1,7 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { DbService, type EventRow } from '../db/db.service';
 import { LicencesService, type LicenceRow } from '../licences/licences.service';
-import { OrdersService, type OrderRow } from '../orders/orders.service';
+import { OrdersService, type OrderRow, type TransferRow } from '../orders/orders.service';
+import { fromMicro, toMicro } from '../payments/tron';
 import { AuthService, type UserRow } from '../auth/auth.service';
 import { CONFIG, type AppConfig } from '../config';
 import type { CodeRow } from '../codes/codes.service';
@@ -106,14 +107,25 @@ export class AdminService {
         expiring7: count(`SELECT COUNT(*) AS n FROM licences WHERE status = 'active' AND end_ms > ? AND end_ms < ?`, now, now + 7 * DAY),
         members: count('SELECT COUNT(*) AS n FROM users WHERE last_login_ms > 0'),
         newMembers7: count('SELECT COUNT(*) AS n FROM users WHERE created_ms > ? AND last_login_ms > 0', now - 7 * DAY),
-        attention: count(`SELECT COUNT(*) AS n FROM orders WHERE status IN ('review','partially_paid','refunded')`),
-        inProgress: count(`SELECT COUNT(*) AS n FROM orders WHERE status IN ('pending','confirming') AND payment_id IS NOT NULL`),
+        attention:
+          count(`SELECT COUNT(*) AS n FROM orders WHERE status IN ('review','partially_paid','refunded')`) +
+          count(`SELECT COUNT(*) AS n FROM chain_transfers WHERE status = 'unmatched'`),
+        unmatched: count(`SELECT COUNT(*) AS n FROM chain_transfers WHERE status = 'unmatched'`),
+        inProgress: count(`SELECT COUNT(*) AS n FROM orders WHERE status IN ('pending','confirming')`),
         unusedCodes: count(`SELECT COUNT(*) AS n FROM codes WHERE status = 'unused'`),
       },
       planMix: this.db
         .all<{ plan: string; n: number }>(`SELECT plan, COUNT(*) AS n FROM licences WHERE ${activeSql} GROUP BY plan ORDER BY n DESC`, now)
         .map((r) => ({ plan: this.planLabel(r.plan), count: r.n })),
-      checkout: { provider: 'NOWPayments', configured: !!(this.cfg.nowpayments.apiKey && this.cfg.nowpayments.ipnSecret), payCurrency: this.cfg.nowpayments.payCurrency },
+      checkout: {
+        provider: 'Direct to your wallet (TRON)',
+        configured: !!this.cfg.tron.address,
+        payCurrency: 'USDT (TRC20)',
+        address: this.cfg.tron.address || null,
+        sources: [...new Set([new URL(this.cfg.tron.apiBase).host, new URL(this.cfg.tron.nodeUrl).host])],
+        windowMinutes: this.cfg.tron.windowMinutes,
+        ...this.orders.watcherState(),
+      },
       roleSync: !!(this.cfg.bot.token && this.cfg.bot.guildId && this.cfg.bot.roleId),
     };
   }
@@ -130,8 +142,9 @@ export class AdminService {
     if (q.q) {
       const t = q.q.trim();
       w.add(
-        `(o.id LIKE ? ESCAPE '\\' OR o.user_id LIKE ? ESCAPE '\\' OR u.username LIKE ? ESCAPE '\\' OR u.display_name LIKE ? ESCAPE '\\' OR o.invoice_id = ? OR o.payment_id = ?)`,
-        like(t), like(t), like(t), like(t), t, t,
+        `(o.id LIKE ? ESCAPE '\\' OR o.user_id LIKE ? ESCAPE '\\' OR u.username LIKE ? ESCAPE '\\' OR u.display_name LIKE ? ESCAPE '\\'
+          OR o.txid = ? OR o.claimed_txid = ? OR o.payer = ? OR o.amount_micro = ?)`,
+        like(t), like(t), like(t), like(t), t.toLowerCase(), t.toLowerCase(), t, /^\d{1,9}(\.\d{1,6})?$/.test(t) ? toMicro(Number(t)) : -1,
       );
     }
     return w;
@@ -158,11 +171,13 @@ export class AdminService {
       planLabel: this.planLabel(r.plan),
       amount: r.amount,
       status: r.status,
-      providerStatus: r.provider_status,
-      payCurrency: r.pay_currency,
-      paidAmount: r.paid_amount,
-      invoiceId: r.invoice_id,
-      paymentId: r.payment_id,
+      expected: r.amount_micro ? fromMicro(r.amount_micro, 4) : null,
+      received: r.paid_micro ? fromMicro(r.paid_micro) : null,
+      txid: r.txid,
+      claimedTxid: r.claimed_txid,
+      payer: r.payer,
+      paidTxAt: r.paid_tx_ms,
+      expiresAt: r.expires_ms,
       note: r.note,
       createdAt: r.created_ms,
       updatedAt: r.updated_ms,
@@ -183,12 +198,46 @@ export class AdminService {
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const iso = (ms: number | null) => (ms ? new Date(ms).toISOString() : '');
-    const head = ['order', 'created', 'member', 'discord_id', 'plan', 'amount_usd', 'status', 'paid_at', 'pay_currency', 'paid_amount', 'payment_id', 'note'];
+    const head = ['order', 'created', 'member', 'discord_id', 'plan', 'price_usdt', 'status', 'paid_at', 'expected_usdt', 'received_usdt', 'txid', 'payer', 'note'];
     const lines = rows.map((r) =>
       [r.id, iso(r.created_ms), r.display_name || r.username || '', r.user_id, this.planLabel(r.plan), r.amount, r.status,
-        r.status === 'paid' ? iso(r.decided_ms) : '', r.pay_currency, r.paid_amount, r.payment_id, r.note].map(cell).join(','),
+        r.status === 'paid' ? iso(r.decided_ms) : '', r.amount_micro ? fromMicro(r.amount_micro, 4) : '', r.paid_micro ? fromMicro(r.paid_micro) : '',
+        r.txid ?? r.claimed_txid ?? '', r.payer ?? '', r.note].map(cell).join(','),
     );
     return [head.join(','), ...lines].join('\n') + '\n';
+  }
+
+  // ---------- payments seen on the blockchain
+
+  listTransfers(q: ListQuery): Page<ReturnType<AdminService['transferRow']>> {
+    const { page, size, offset } = this.paging(q);
+    const w = new Where();
+    if (q.status === 'all') {
+      /* everything */
+    } else if (/^(matched|unmatched|ignored)$/.test(q.status ?? '')) w.add('t.status = ?', q.status);
+    else w.add("t.status = 'unmatched'");
+    if (q.q) {
+      const t = q.q.trim();
+      w.add('(t.txid = ? OR t.from_addr = ? OR t.order_id = ? OR t.value_micro = ?)', t.toLowerCase(), t, t.toLowerCase(),
+        /^\d{1,9}(\.\d{1,6})?$/.test(t) ? toMicro(Number(t)) : -1);
+    }
+    const total = this.db.get<{ n: number }>(`SELECT COUNT(*) AS n FROM chain_transfers t ${w.sql}`, ...w.params)!.n;
+    const rows = this.db.all<TransferRow>(`SELECT * FROM chain_transfers t ${w.sql} ORDER BY t.block_ms DESC LIMIT ? OFFSET ?`, ...w.params, size, offset);
+    return { items: rows.map((r) => this.transferRow(r)), total, page, size };
+  }
+
+  private transferRow(r: TransferRow) {
+    return {
+      txid: r.txid,
+      from: r.from_addr,
+      amount: fromMicro(r.value_micro),
+      paidAt: r.block_ms,
+      status: r.status,
+      orderId: r.order_id,
+      note: r.note,
+      seenAt: r.seen_ms,
+      decidedBy: r.decided_by,
+    };
   }
 
   // ---------- subscriptions (licences)

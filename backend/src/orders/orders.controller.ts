@@ -1,12 +1,11 @@
-import { Body, Controller, Get, Headers, HttpCode, NotFoundException, Param, Post, Req, UseGuards } from '@nestjs/common';
-import type { RawBodyRequest } from '@nestjs/common';
-import type { Request } from 'express';
+import { Body, Controller, Get, Header, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { Equals, IsBoolean, IsString, Length, Matches } from 'class-validator';
+import { toString as qrSvg } from 'qrcode';
 import { CurrentAuth, UserGuard } from '../auth/guards';
 import type { AuthContext } from '../auth/auth.service';
 import { OrdersService } from './orders.service';
-import { NowPaymentsClient } from '../payments/nowpayments.client';
+import { TronClient } from '../payments/tron.client';
 import { assertId } from '../common/util';
 
 class CreateOrderDto {
@@ -15,16 +14,20 @@ class CreateOrderDto {
   @IsBoolean() @Equals(true, { message: 'Please accept the Terms and the Risk disclosure to continue.' }) acceptTerms!: boolean;
 }
 
+class ClaimDto {
+  @IsString() @Length(64, 66) @Matches(/^(0x)?[0-9a-fA-F]{64}$/, { message: 'A transaction id (hash) is 64 characters: 0-9 and a-f.' }) txid!: string;
+}
+
 @Controller('api/orders')
 @UseGuards(UserGuard)
 export class OrdersController {
   constructor(private readonly orders: OrdersService) {}
 
-  /** Opens an order and returns the NOWPayments checkout link. Signing in with Discord is required. */
+  /** Opens an order with its unique amount to pay. Signing in with Discord is required. */
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post()
-  async create(@CurrentAuth() a: AuthContext, @Body() dto: CreateOrderDto) {
-    return this.orders.view(await this.orders.create(a.user.id, dto.plan));
+  create(@CurrentAuth() a: AuthContext, @Body() dto: CreateOrderDto) {
+    return this.orders.view(this.orders.create(a.user.id, dto.plan));
   }
 
   @Get(':id')
@@ -36,25 +39,31 @@ export class OrdersController {
   cancel(@CurrentAuth() a: AuthContext, @Param('id') id: string) {
     return this.orders.view(this.orders.cancel(assertId(id), a.user.id));
   }
+
+  /** "I paid from an exchange": the buyer gives the transaction id; it is verified on the blockchain. */
+  @Throttle({ default: { limit: 12, ttl: 60_000 } })
+  @Post(':id/txid')
+  async claim(@CurrentAuth() a: AuthContext, @Param('id') id: string, @Body() dto: ClaimDto) {
+    return this.orders.view(await this.orders.claim(assertId(id), a.user.id, dto.txid));
+  }
 }
 
-/**
- * Payment notifications from NOWPayments. No session, no Origin: authenticated by the HMAC signature, and the
- * payment is then fetched back from NOWPayments before anything is granted.
- */
-@Controller('api/payments/nowpayments')
-export class NowPaymentsIpnController {
-  constructor(
-    private readonly orders: OrdersService,
-    private readonly np: NowPaymentsClient,
-  ) {}
+/** The receiving address as a QR code (public: it is the same for everyone and holds nothing secret). */
+@Controller('api/payments')
+export class PaymentsController {
+  private cache: { addr: string; svg: string } | null = null;
 
-  @Throttle({ default: { limit: 120, ttl: 60_000 } })
-  @Post('ipn')
-  @HttpCode(200)
-  async ipn(@Req() req: RawBodyRequest<Request>, @Body() body: Record<string, unknown>, @Headers('x-nowpayments-sig') sig?: string) {
-    if (!this.np.configured) throw new NotFoundException();
-    await this.orders.handleIpn(body, sig, req.rawBody);
-    return { ok: true };
+  constructor(private readonly tron: TronClient) {}
+
+  @Get('qr.svg')
+  @Header('Content-Type', 'image/svg+xml')
+  async qr(): Promise<string> {
+    if (!this.tron.configured) throw new NotFoundException();
+    const addr = this.tron.address;
+    if (this.cache?.addr !== addr) {
+      const svg = await qrSvg(addr, { type: 'svg', errorCorrectionLevel: 'M', margin: 1, color: { dark: '#0b0b12', light: '#ffffff' } });
+      this.cache = { addr, svg };
+    }
+    return this.cache.svg;
   }
 }
