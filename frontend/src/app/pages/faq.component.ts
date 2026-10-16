@@ -1,39 +1,52 @@
-import { Component } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
-
-interface QA { q: string; a: string; }
+import { FAQ } from './faq.data';
+import { IconComponent } from '../core/icon.component';
+import { RevealDirective } from '../core/motion';
 
 @Component({
   selector: 'app-faq',
-  imports: [RouterLink],
+  imports: [FormsModule, RouterLink, IconComponent, RevealDirective],
   template: `
-    <section class="wrap" style="padding-top:48px">
-      <div class="center">
-        <span class="chip">Questions</span>
-        <h1 style="font-size:36px;margin:14px 0 10px">Frequently asked</h1>
-      </div>
+    <section class="wrap section-tight" style="padding-top:64px">
+      <span class="chip rise">Help centre</span>
+      <h1 class="rise" style="--d:80ms;margin-top:16px">Frequently asked questions</h1>
+      <p class="lead rise" style="--d:160ms">Installation, payments, licences and the studies themselves. Can't find it? Ask on Discord.</p>
     </section>
-    <section class="wrap section" style="max-width:760px">
-      @for (item of faq; track item.q) {
-        <div class="card" style="margin-bottom:12px">
-          <div class="faq-q">{{ item.q }}</div>
-          <div class="mut">{{ item.a }}</div>
+
+    <section class="wrap" style="max-width:860px;padding-bottom:88px">
+      <div class="search rise" style="--d:220ms;max-width:none;margin-bottom:16px">
+        <app-icon name="search" />
+        <input id="faq-search" [ngModel]="q()" (ngModelChange)="q.set($event)" placeholder="Search the questions" autocomplete="off" />
+      </div>
+      <div class="faq-cats rise" style="--d:260ms">
+        <div class="seg">
+          <button [class.on]="cat() === ''" (click)="cat.set('')">All</button>
+          @for (c of cats; track c.id) { <button [class.on]="cat() === c.id" (click)="cat.set(c.id)">{{ c.label }}</button> }
         </div>
+      </div>
+
+      @for (c of shown(); track c.id) {
+        <h2 style="font-size:18px;margin:28px 0 12px" class="mut" fxrReveal>{{ c.label }}</h2>
+        @for (item of c.items; track item.q) {
+          <details class="acc" fxrReveal><summary>{{ item.q }}<span class="plus"></span></summary><div class="ans">{{ item.a }}</div></details>
+        }
+      } @empty {
+        <div class="card empty">No question matches "{{ q() }}". Try another word, or ask us on Discord.</div>
       }
-      <p class="center mut" style="margin-top:20px">Still stuck? Check <a routerLink="/account">your account</a> or ask on Discord.</p>
+      <p class="mut" style="margin-top:28px">Still stuck? Open a ticket on Discord or read the <a routerLink="/legal/terms">Terms</a> and the <a routerLink="/legal/risk">Risk disclosure</a>.</p>
     </section>
   `,
 })
 export class FaqComponent {
-  faq: QA[] = [
-    { q: 'Which platform does FXR work with?', a: 'MotiveWave, on Windows and macOS. The studies need tick-by-tick data with bid/ask side; Rithmic is recommended.' },
-    { q: 'How do I pay?', a: 'Sign in with Discord, pick a plan and send the exact USDT amount shown (TRON / TRC20) to the address on the checkout page, then paste your transaction ID. Your licence activates as soon as the payment is confirmed.' },
-    { q: 'Why do I sign in with Discord?', a: 'Your licence is tied to your Discord account, so there is no password to leak and you can get your key back from any computer. We only read your Discord name, avatar and id.' },
-    { q: 'Do you store my wallet?', a: 'No. We only ever receive USDT at our public address. We never ask for, store, or touch your private key or seed phrase.' },
-    { q: 'Can I use my licence on two computers?', a: 'A licence runs on one computer at a time. You can move it to another machine from your account once every 7 days, or ask support.' },
-    { q: 'Do I need the server running on my PC?', a: 'No. FXR Loader simply checks your licence online when MotiveWave starts. Nothing of ours runs in the background.' },
-    { q: 'Are updates included?', a: 'Yes. New versions of the studies are delivered automatically — there is no new file to install.' },
-    { q: 'What happens when my plan ends?', a: 'The studies lock until you renew. Your settings and charts stay untouched.' },
-    { q: 'Can I get a refund?', a: 'Because licences unlock software immediately, sales are generally final. See the refunds page for the details and exceptions.' },
-  ];
+  cats = FAQ;
+  q = signal('');
+  cat = signal('');
+  shown = computed(() => {
+    const words = this.q().toLowerCase().split(/\s+/).filter(Boolean);
+    return FAQ.filter((c) => !this.cat() || c.id === this.cat())
+      .map((c) => ({ ...c, items: c.items.filter((i) => words.every((w) => (i.q + ' ' + i.a).toLowerCase().includes(w))) }))
+      .filter((c) => c.items.length);
+  });
 }

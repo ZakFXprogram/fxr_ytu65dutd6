@@ -8,6 +8,8 @@ export interface DemoApi {
   signIn(): void;
   setPersona(p: 'member' | 'owner'): void;
   panelPath: string;
+  /** Preview only: plays a payment (detected, then confirmed) for an order. */
+  simulatePayment?(orderId: string): void;
 }
 
 export const DEMO = true;
@@ -16,6 +18,7 @@ export const demoApi: DemoApi | null = {
   signIn: () => { if (demoStore.persona === 'visitor') demoStore.persona = 'member'; },
   setPersona: (p) => { demoStore.persona = p; },
   panelPath: demoStore.panelPath,
+  simulatePayment: (orderId) => demoStore.pay(orderId),
 };
 export const demoRouterFeatures: RouterFeatures[] = [withHashLocation()];
 export const demoHttpFeatures: HttpFeature<HttpFeatureKind>[] = [withInterceptors([demoInterceptor])];

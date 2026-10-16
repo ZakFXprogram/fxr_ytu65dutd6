@@ -73,7 +73,7 @@ export class CodesService {
       if (!n) return null;
       const lic = this.licences.grant(userId, c.plan, `key ${c.hint}`, '', c.days);
       this.db.run('UPDATE codes SET licence_id = ? WHERE id = ?', lic.id, c.id);
-      this.db.logEvent('redeem', `redeem key …${c.hint} activated (${c.days ? c.days + ' days' : 'lifetime'})`, userId);
+      this.db.logEvent('redeem', `Redeem key …${c.hint} activated (${c.days ? '+' + c.days + ' days' : 'lifetime'})`, userId);
       return { plan: c.plan, days: c.days, expiresAt: this.licences.byId(lic.id)!.end_ms };
     });
     if (!res) throw new NotFoundException('This key is not valid or has already been used.');

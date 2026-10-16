@@ -52,6 +52,8 @@
               }
             ],
             "styles": [
+              "node_modules/@fontsource-variable/unbounded/index.css",
+              "node_modules/@fontsource-variable/manrope/index.css",
               "src/styles.css"
             ],
             "scripts": []
@@ -66,8 +68,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "8kB",
+                  "maximumError": "16kB"
                 }
               ],
               "outputHashing": "all",
@@ -94,8 +96,8 @@
                 },
                 {
                   "type": "anyComponentStyle",
-                  "maximumWarning": "4kB",
-                  "maximumError": "8kB"
+                  "maximumWarning": "8kB",
+                  "maximumError": "16kB"
                 }
               ],
               "outputHashing": "all",

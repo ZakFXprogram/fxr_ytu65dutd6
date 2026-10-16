@@ -144,7 +144,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       this.db.run('UPDATE orders SET status = ?, note = ?, updated_ms = ? WHERE id = ?', ORDER_FAILED, 'payment page could not be created', Date.now(), id);
       throw new BadGatewayException('The payment page could not be created. Please try again in a minute.');
     }
-    this.db.logEvent('order', `order ${id.slice(0, 8)} opened: ${plan.label}, ${amount} USD`, userId);
+    this.db.logEvent('order', `Order ${id.slice(0, 8).toUpperCase()} opened: ${plan.label}, ${amount} USD`, userId);
     return this.byId(id)!;
   }
 
@@ -202,7 +202,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     if (!o) throw new NotFoundException();
     if (!o.payment_id) throw new ConflictException('No payment has been started for this order yet.');
     this.apply(o, await this.np.getPayment(o.payment_id), 'nowpayments');
-    this.db.logEvent('recheck', `order ${id.slice(0, 8)} re-checked by ${by}`, o.user_id);
+    this.db.logEvent('recheck', `Payment of order ${id.slice(0, 8).toUpperCase()} re-checked with NOWPayments by the owner`, o.user_id);
     return this.byId(id)!;
   }
 
@@ -257,7 +257,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
   private setStatus(o: OrderRow, status: string, note: string | null): void {
     if (o.status === status) return;
     this.db.run('UPDATE orders SET status = ?, note = COALESCE(?, note), updated_ms = ? WHERE id = ?', status, note, Date.now(), o.id);
-    if (status === ORDER_REVIEW || status === ORDER_PARTIAL) this.db.logEvent('attention', `order ${o.id.slice(0, 8)} needs review: ${note}`, o.user_id);
+    if (status === ORDER_REVIEW || status === ORDER_PARTIAL) this.db.logEvent('attention', `Order ${o.id.slice(0, 8).toUpperCase()} set aside for review: ${note}`, o.user_id);
   }
 
   private markPaid(o: OrderRow, by: string, note: string | null): OrderRow {
@@ -270,7 +270,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
         'UPDATE orders SET status = ?, licence_id = ?, decided_by = ?, decided_ms = ?, note = COALESCE(?, note), updated_ms = ? WHERE id = ?',
         ORDER_PAID, lic.id, by, now, note, now, o.id,
       );
-      this.db.logEvent('paid', `order ${o.id.slice(0, 8)} paid (${o.amount} USD) -> licence granted`, o.user_id);
+      this.db.logEvent('paid', `Payment confirmed for order ${o.id.slice(0, 8).toUpperCase()} (${o.amount} USD)`, o.user_id);
       return this.byId(o.id)!;
     });
     this.roles.syncSoon(o.user_id);
@@ -289,7 +289,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     const o = this.byId(id);
     if (!o || o.status === ORDER_PAID || o.status === ORDER_CANCELLED) return false;
     this.db.run('UPDATE orders SET status = ?, decided_by = ?, decided_ms = ?, updated_ms = ? WHERE id = ?', ORDER_CANCELLED, adminId, Date.now(), Date.now(), id);
-    this.db.logEvent('cancel', `order ${id.slice(0, 8)} cancelled by ${adminId}`, o.user_id);
+    this.db.logEvent('cancel', `Order ${id.slice(0, 8).toUpperCase()} cancelled by the owner`, o.user_id);
     return true;
   }
 

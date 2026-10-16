@@ -7,6 +7,8 @@ export interface DemoApi {
   signIn(): void;
   setPersona(p: 'member' | 'owner'): void;
   panelPath: string;
+  /** Preview only: plays a payment (detected, then confirmed) for an order. */
+  simulatePayment?(orderId: string): void;
 }
 
 export const DEMO = false;

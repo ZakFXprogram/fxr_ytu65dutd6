@@ -1,40 +1,52 @@
-import { Component } from '@angular/core';
+import { Component, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import { STUDIES } from '../core/studies';
+import { IconComponent } from '../core/icon.component';
+import { RevealDirective, SpotDirective } from '../core/motion';
 
 @Component({
   selector: 'app-studies',
-  imports: [RouterLink],
+  imports: [RouterLink, IconComponent, RevealDirective, SpotDirective],
   template: `
-    <section class="wrap" style="padding-top:48px">
-      <div class="center">
-        <span class="chip">The FXR suite</span>
-        <h1 style="font-size:38px;margin:14px 0 10px">Seven studies, one tape</h1>
-        <p class="mut" style="max-width:600px;margin:0 auto">Every study below is driven by tick-by-tick data with bid/ask side. Screenshots are rendered by MotiveWave's own engine on simulated data.</p>
+    <section class="wrap section-tight" style="padding-top:64px">
+      <span class="chip rise">The FXR Bundle</span>
+      <h1 class="rise" style="--d:80ms;margin-top:16px">Seven studies, <span class="grad">one tape</span></h1>
+      <p class="lead rise" style="--d:160ms">Every study reads the same tick-by-tick data, so they agree with each other. Screenshots are rendered by MotiveWave on simulated data.</p>
+      <div class="seg rise" style="--d:240ms;margin-top:10px">
+        @for (t of tags; track t) {
+          <button [class.on]="tag() === t" (click)="tag.set(t)">{{ t || 'All' }} <span class="n">{{ count(t) }}</span></button>
+        }
       </div>
     </section>
 
-    <section class="wrap section" style="display:grid;gap:40px">
-      @for (s of studies; track s.name) {
-        <div class="study">
-          <img [src]="'studies/' + s.img + '.jpg'" [alt]="s.name" loading="lazy" />
-          <div class="study-txt">
-            <span class="tag">{{ s.tag }}</span>
-            <h3>{{ s.name }}</h3>
-            <p class="mut">{{ s.blurb }}</p>
-            <ul style="margin:12px 0 0;padding-left:18px;color:var(--mut)">
-              @for (p of s.points; track p) { <li style="margin-bottom:5px">{{ p }}</li> }
-            </ul>
-          </div>
-        </div>
-      }
-    </section>
+    <section class="wrap" style="padding-bottom:88px">
+      <div class="studies">
+        @for (s of shown(); track s.slug; let i = $index) {
+          <a class="card study-card" fxrSpot [fxrReveal]="(i % 3) * 80" [routerLink]="['/studies', s.slug]">
+            <div class="shot"><img [src]="'studies/' + s.img + '.jpg'" [alt]="s.name + ' on a MotiveWave chart'" loading="lazy" /></div>
+            <div class="body">
+              <span class="tag">{{ s.tag }}</span>
+              <h3>{{ s.name }}</h3>
+              <p>{{ s.blurb }}</p>
+              <span class="go">View study <app-icon name="arrow" /></span>
+            </div>
+          </a>
+        }
+      </div>
 
-    <section class="wrap section center">
-      <a class="btn btn-primary" routerLink="/pricing">Get the full suite</a>
+      <div class="cta-band" fxrReveal style="margin-top:56px">
+        <h2>All seven are in the bundle</h2>
+        <p>One licence unlocks every study, every update and every future study.</p>
+        <a class="btn btn-primary" routerLink="/pricing">See the bundle <app-icon name="arrow" /></a>
+      </div>
     </section>
   `,
 })
 export class StudiesComponent {
-  studies = STUDIES;
+  tags = ['', ...Array.from(new Set(STUDIES.map((s) => s.tag)))];
+  tag = signal('');
+  shown = computed(() => STUDIES.filter((s) => !this.tag() || s.tag === this.tag()));
+  count(t: string): number {
+    return STUDIES.filter((s) => !t || s.tag === t).length;
+  }
 }

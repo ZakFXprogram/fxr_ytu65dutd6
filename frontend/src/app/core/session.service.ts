@@ -25,18 +25,18 @@ export class SessionService {
     });
   }
 
-  /** Full-page redirect to Discord; comes back to `next`, or to the current page (home goes to the account). */
+  /** Full-page redirect to Discord; comes back to `next`, or to the current page (home goes to the dashboard). */
   login(next?: string): void {
     if (demoApi) {
       // preview build: no Discord, sign straight in as the demo member
       demoApi.signIn();
       this.refresh();
       const r = this.router.url;
-      void this.router.navigateByUrl(next ?? (r === '/' ? '/account' : r));
+      void this.router.navigateByUrl(next ?? (r === '/' ? '/dashboard' : r));
       return;
     }
     const here = window.location.pathname + window.location.search;
-    const back = next ?? (window.location.pathname === '/' ? '/account' : here);
+    const back = next ?? (window.location.pathname === '/' ? '/dashboard' : here);
     window.location.href = '/api/auth/discord?next=' + encodeURIComponent(back);
   }
 

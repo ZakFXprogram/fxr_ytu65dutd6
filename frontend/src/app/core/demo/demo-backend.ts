@@ -1,89 +1,173 @@
-// In-browser stand-in for the NestJS API, used only by the preview build. Mirrors the real endpoints' shapes.
+// In-browser stand-in for the NestJS API, used only by the preview build. Mirrors the real endpoints' shapes and
+// is seeded with clearly fictional sample data so the panel can be seen at volume. Nothing leaves the browser.
 import { HttpErrorResponse, HttpInterceptorFn, HttpResponse } from '@angular/common/http';
 import { Observable, of, throwError, timer } from 'rxjs';
-import { map, mergeMap } from 'rxjs/operators';
+import { mergeMap } from 'rxjs/operators';
 
 type Persona = 'visitor' | 'member' | 'owner';
-interface User { id: string; name: string; username: string; banned: boolean; lastLoginAt: number; owner: boolean }
-interface Lic {
-  id: string; userRef: string; plan: string; status: string; startMs: number; endMs: number;
-  machine: boolean; keySetAt: number; movedAt: number; lastSeenAt: number | null; source: string; createdAt: number;
-}
-interface Ord {
-  id: string; userId: string; plan: string; amount: string; status: string; txid: string | null;
-  note: string | null; createdAt: number; expiresAt: number; submittedAt: number | null; decidedAt: number | null;
-}
+interface User { id: string; name: string; username: string; banned: boolean; owner: boolean; joined: number; lastLogin: number; role: boolean; inServer: boolean | null }
+interface Lic { id: string; userId: string; plan: string; status: string; start: number; end: number; machine: boolean; keySet: number; moved: number; lastSeen: number | null; source: string }
+interface Ord { id: string; userId: string; plan: string; amount: string; status: string; providerStatus: string | null; payCurrency: string | null; paidAmount: string | null; invoiceId: string | null; paymentId: string | null; note: string | null; created: number; updated: number; paidAt: number | null; decidedBy: string | null }
+interface Code { id: string; hint: string; raw: string; plan: string; days: number; status: string; batch: string | null; created: number; usedBy: string | null; usedAt: number | null }
+interface Ev { id: number; at: number; kind: string; text: string; userId: string | null }
+interface Sess { id: string; userId: string; device: string; created: number; lastSeen: number; expires: number; current: boolean }
 
 const DAY = 86400_000;
 const now = () => Date.now();
-const PAY_TO = 'DEMO-ADDRESS-DO-NOT-PAY';
-const USDT = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
 const PLANS = [
-  { id: 'month1', label: '1 month', price: 8, days: 30 },
+  { id: 'month1', label: 'Monthly', price: 8, days: 30 },
   { id: 'month3', label: '3 months', price: 24, days: 90 },
   { id: 'month6', label: '6 months', price: 48, days: 180 },
   { id: 'year1', label: '1 year', price: 96, days: 365 },
   { id: 'lifetime', label: 'Lifetime', price: 67, days: 0 },
 ];
+const plan = (p: string) => PLANS.find((x) => x.id === p);
 const OWNER = '111111111111111111';
 const ME = '333333333333333333';
+const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
 
-const hex = (n: number) => Array.from(crypto.getRandomValues(new Uint8Array(n)), (b) => b.toString(16).padStart(2, '0')).join('');
+// deterministic sample data
+let seed = 7;
+const rnd = () => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;
+const pick = <T>(a: T[]) => a[Math.floor(rnd() * a.length)];
+const hex = (n: number) => Array.from({ length: n * 2 }, () => '0123456789abcdef'[Math.floor(rnd() * 16)]).join('');
 const id = () => hex(12);
-const KEY_ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
-const newKey = () => 'FXR-' + [0, 1, 2, 3].map(() => Array.from(crypto.getRandomValues(new Uint8Array(4)), (b) => KEY_ALPHA[b % 32]).join('')).join('-');
-const plan = (p: string) => PLANS.find((x) => x.id === p);
+const group = () => Array.from({ length: 4 }, () => ALPHA[Math.floor(Math.random() * 32)]).join('');
 
 class Store {
   persona: Persona = 'visitor';
   panelPath = 'owner-panel';
-  users: User[] = [
-    { id: OWNER, name: 'You (owner)', username: 'owner', banned: false, lastLoginAt: now() - 3600_000, owner: true },
-    { id: ME, name: 'Demo member', username: 'demo_member', banned: false, lastLoginAt: now() - 600_000, owner: false },
-    { id: '555555555555555555', name: 'Alex', username: 'alex_trades', banned: false, lastLoginAt: now() - 2 * 3600_000, owner: false },
-    { id: '666666666666666666', name: 'Sam', username: 'sam.nq', banned: false, lastLoginAt: now() - 3 * DAY, owner: false },
-    { id: '777777777777777777', name: 'Chris', username: 'chris_es', banned: false, lastLoginAt: now() - 40 * DAY, owner: false },
-  ];
-  lics: Lic[] = [
-    { id: id(), userRef: '555555555555555555', plan: 'month1', status: 'active', startMs: now() - 26 * DAY, endMs: now() + 4 * DAY, machine: true, keySetAt: now() - 26 * DAY, movedAt: 0, lastSeenAt: now() - 7200_000, source: 'order', createdAt: now() - 26 * DAY },
-    { id: id(), userRef: '666666666666666666', plan: 'lifetime', status: 'active', startMs: now() - 60 * DAY, endMs: 0, machine: true, keySetAt: now() - 60 * DAY, movedAt: 0, lastSeenAt: now() - DAY, source: 'order', createdAt: now() - 60 * DAY },
-    { id: id(), userRef: '777777777777777777', plan: 'month1', status: 'active', startMs: now() - 70 * DAY, endMs: now() - 40 * DAY, machine: true, keySetAt: now() - 70 * DAY, movedAt: 0, lastSeenAt: now() - 41 * DAY, source: 'order', createdAt: now() - 70 * DAY },
-  ];
-  orders: Ord[] = [
-    { id: id(), userId: '555555555555555555', plan: 'month1', amount: '8.52', status: 'submitted', txid: hex(32), note: null, createdAt: now() - 3 * 3600_000, expiresAt: now() + 21 * 3600_000, submittedAt: now() - 2.5 * 3600_000, decidedAt: null },
-    { id: id(), userId: '666666666666666666', plan: 'lifetime', amount: '67.14', status: 'paid', txid: hex(32), note: null, createdAt: now() - 60 * DAY, expiresAt: now() - 59 * DAY, submittedAt: now() - 60 * DAY, decidedAt: now() - 60 * DAY },
-  ];
-  events = [
-    { ts_ms: now() - 2.5 * 3600_000, kind: 'payment', text: 'order …: transaction id submitted by 555555555555555555' },
-    { ts_ms: now() - 3 * 3600_000, kind: 'order', text: 'order …: opened by 555555555555555555: month1 for 8.52 USDT' },
-  ];
+  users: User[] = [];
+  lics: Lic[] = [];
+  orders: Ord[] = [];
+  codes: Code[] = [];
+  events: Ev[] = [];
+  sessions: Sess[] = [];
+  private evId = 1;
 
-  log(kind: string, text: string) { this.events.unshift({ ts_ms: now(), kind, text }); }
-  userId(): string | null { return this.persona === 'visitor' ? null : this.persona === 'owner' ? OWNER : ME; }
-  name(uid: string) { return this.users.find((u) => u.id === uid)?.name ?? null; }
-  isActive(l: Lic) { return l.status === 'active' && (l.endMs === 0 || l.endMs > now()); }
-  effStatus(l: Lic) { return l.status === 'active' && !this.isActive(l) ? 'expired' : l.status; }
+  constructor() {
+    const t = now();
+    this.users.push({ id: OWNER, name: 'You (owner)', username: 'owner', banned: false, owner: true, joined: t - 90 * DAY, lastLogin: t - 3600_000, role: true, inServer: true });
+    this.users.push({ id: ME, name: 'Demo member', username: 'demo_member', banned: false, owner: false, joined: t - 600_000, lastLogin: t - 600_000, role: false, inServer: true });
+    const handles = ['tape_reader', 'nq_scalper', 'es_auction', 'deltaflow', 'mbo_hunter', 'vwap_kid', 'orderbook_owl', 'absorb', 'leg2leg', 'poc_rider', 'ib_break', 'rth_open', 'globex', 'microES', 'tickstack', 'bidask', 'sweeper', 'iceberg', 'printwatch', 'footprint'];
+    for (let i = 0; i < 46; i++) {
+      const h = `${pick(handles)}${i}`;
+      const joined = t - Math.floor(rnd() * 80) * DAY - Math.floor(rnd() * DAY);
+      this.users.push({ id: String(500000000000000000 + i * 7919), name: h.replace(/_/g, ' '), username: h, banned: i === 13, owner: false, joined, lastLogin: Math.min(t, joined + Math.floor(rnd() * 20) * DAY), role: false, inServer: rnd() > 0.1 });
+    }
+    // orders over the last 30 days, most paid
+    const members = this.users.filter((u) => !u.owner && u.id !== ME);
+    for (let i = 0; i < 74; i++) {
+      const u = pick(members);
+      const p = pick(['month1', 'month1', 'month1', 'month3', 'month3', 'month6', 'year1', 'lifetime', 'lifetime']);
+      const created = t - Math.floor(rnd() * 30) * DAY - Math.floor(rnd() * DAY);
+      const roll = rnd();
+      const status = i < 2 ? 'partially_paid' : i < 3 ? 'review' : i < 6 ? 'pending' : roll < 0.08 ? 'expired' : roll < 0.12 ? 'cancelled' : 'paid';
+      const price = plan(p)!.price;
+      const o: Ord = {
+        id: id(), userId: u.id, plan: p, amount: price.toFixed(2), status,
+        providerStatus: status === 'paid' ? 'finished' : status === 'partially_paid' ? 'partially_paid' : status === 'review' ? 'finished' : status === 'pending' ? 'waiting' : null,
+        payCurrency: status === 'expired' || status === 'cancelled' ? null : 'usdttrc20',
+        paidAmount: status === 'paid' ? price.toFixed(2) : status === 'partially_paid' ? (price - 1.5).toFixed(2) : status === 'review' ? price.toFixed(2) : null,
+        invoiceId: String(4800000 + i), paymentId: status === 'pending' || status === 'expired' || status === 'cancelled' ? null : String(6100000000 + i),
+        note: status === 'partially_paid' ? 'customer sent less than the invoice amount' : status === 'review' ? 'price mismatch (7.5 usd)' : null,
+        created, updated: created + 600_000, paidAt: status === 'paid' ? created + 420_000 : null, decidedBy: status === 'paid' ? 'nowpayments' : null,
+      };
+      this.orders.push(o);
+      if (status === 'paid') this.grant(u.id, p, 'order', o.paidAt!, false);
+    }
+    this.orders.sort((a, b) => b.created - a.created);
+    for (const u of this.users) u.role = this.active(u.id) && u.inServer !== false;
+    // a few redeem keys
+    for (let i = 0; i < 12; i++) {
+      const used = i < 5;
+      const by = used ? pick(members).id : null;
+      this.codes.push({ id: id(), hint: group(), raw: '', plan: i < 8 ? 'month1' : 'month3', days: i < 8 ? 30 : 90, status: i === 11 ? 'disabled' : used ? 'used' : 'unused', batch: i < 8 ? 'giveaway-september' : 'partner-alpha', created: t - 20 * DAY, usedBy: by, usedAt: used ? t - (15 - i) * DAY : null });
+    }
+    // activity
+    for (const o of [...this.orders].reverse()) {
+      this.log('order', `Order ${o.id.slice(0, 8).toUpperCase()} opened: ${plan(o.plan)!.label}, ${o.amount} USD`, o.userId, o.created);
+      if (o.status === 'paid') this.log('paid', `Payment confirmed for order ${o.id.slice(0, 8).toUpperCase()} (${o.amount} USD)`, o.userId, o.paidAt!);
+      if (o.status === 'partially_paid' || o.status === 'review') this.log('attention', `Order ${o.id.slice(0, 8).toUpperCase()} set aside for review: ${o.note}`, o.userId, o.updated);
+    }
+    this.events.sort((a, b) => b.at - a.at);
+    this.sessions.push(
+      { id: hex(8), userId: ME, device: 'Chrome on Windows', created: t - 600_000, lastSeen: t, expires: t + 7 * DAY, current: true },
+      { id: hex(8), userId: ME, device: 'Safari on iPhone', created: t - 2 * DAY, lastSeen: t - 5 * 3600_000, expires: t + 5 * DAY, current: false },
+      { id: hex(8), userId: OWNER, device: 'Chrome on Windows', created: t - 3600_000, lastSeen: t, expires: t + 8 * 3600_000, current: true },
+    );
+    this.log('login', 'Signed in with Discord (Safari on iPhone)', ME, t - 2 * DAY);
+  }
 
-  grant(uid: string, planId: string, source: string): Lic {
+  log(kind: string, text: string, userId: string | null, at = now()): void {
+    this.events.unshift({ id: this.evId++, at, kind, text, userId });
+  }
+  user(uid: string) { return this.users.find((u) => u.id === uid); }
+  me(): string | null { return this.persona === 'visitor' ? null : this.persona === 'owner' ? OWNER : ME; }
+  isActive(l: Lic) { return l.status === 'active' && (l.end === 0 || l.end > now()); }
+  active(uid: string) { return this.lics.some((l) => l.userId === uid && this.isActive(l)); }
+  eff(l: Lic) { return l.status === 'active' && !this.isActive(l) ? 'expired' : l.status; }
+
+  grant(uid: string, planId: string, source: string, at = now(), log = true, daysOverride?: number): Lic {
     const p = plan(planId)!;
-    const cur = this.lics.filter((l) => l.userRef === uid && l.status === 'active').sort((a, b) => (a.endMs === 0 ? -1 : b.endMs === 0 ? 1 : b.endMs - a.endMs))[0];
+    const days = daysOverride ?? p.days;
+    const cur = this.lics.filter((l) => l.userId === uid && l.status === 'active').sort((a, b) => (a.end === 0 ? -1 : b.end === 0 ? 1 : b.end - a.end))[0];
     if (cur) {
-      if (cur.endMs !== 0) { cur.endMs = p.days === 0 ? 0 : Math.max(cur.endMs, now()) + p.days * DAY; cur.plan = planId; }
-      this.log('renew', `licence of ${uid} extended with ${planId} via ${source}`);
+      if (cur.end !== 0) { cur.end = days === 0 ? 0 : Math.max(cur.end, at) + days * DAY; cur.plan = planId; }
+      if (log) this.log('renew', `Licence extended: ${p.label} from ${source === 'redeem' ? 'a redeem key' : source === 'panel' ? 'the owner' : 'a payment'}`, uid, at);
       return cur;
     }
-    const l: Lic = { id: id(), userRef: uid, plan: planId, status: 'active', startMs: now(), endMs: p.days ? now() + p.days * DAY : 0, machine: false, keySetAt: 0, movedAt: 0, lastSeenAt: null, source, createdAt: now() };
+    const l: Lic = { id: id(), userId: uid, plan: planId, status: 'active', start: at, end: days ? at + days * DAY : 0, machine: rnd() > 0.3, keySet: rnd() > 0.2 ? at : 0, moved: 0, lastSeen: rnd() > 0.3 ? at + DAY : null, source };
+    if (uid === ME) { l.machine = false; l.keySet = 0; l.lastSeen = null; }
     this.lics.unshift(l);
-    this.log('issue', `licence created for ${uid} (${planId}) via ${source}`);
+    if (log) this.log('issue', `Licence activated: ${p.label} from ${source === 'redeem' ? 'a redeem key' : source === 'panel' ? 'the owner' : 'a payment'}`, uid, at);
     return l;
   }
 
+  syncRole(uid: string): string {
+    const u = this.user(uid);
+    if (!u) return 'unchanged';
+    const want = this.active(uid);
+    if (want && !u.role) { if (u.inServer === false) return 'not_in_server'; u.role = true; this.log('role', 'Discord member role added', uid); return 'granted'; }
+    if (!want && u.role) { u.role = false; this.log('role', 'Discord member role removed (no active licence)', uid); return 'removed'; }
+    return 'unchanged';
+  }
+
+  pay(orderId: string): void {
+    const o = this.orders.find((x) => x.id === orderId);
+    if (!o || o.status !== 'pending') return;
+    o.status = 'confirming'; o.providerStatus = 'confirming'; o.paymentId = String(6200000000 + Math.floor(Math.random() * 1e6)); o.payCurrency = 'usdttrc20';
+    setTimeout(() => {
+      o.status = 'paid'; o.providerStatus = 'finished'; o.paidAmount = o.amount; o.paidAt = now(); o.decidedBy = 'nowpayments';
+      this.grant(o.userId, o.plan, 'order');
+      this.log('paid', `Payment confirmed for order ${o.id.slice(0, 8).toUpperCase()} (${o.amount} USD)`, o.userId);
+      this.syncRole(o.userId);
+    }, 3500);
+  }
+
+  // ---- views
   licView(l: Lic) {
-    const next = l.movedAt + 7 * DAY;
-    return { id: l.id, plan: l.plan, planLabel: plan(l.plan)?.label ?? l.plan, status: this.effStatus(l), lifetime: l.endMs === 0, expiresAt: l.endMs, activated: l.machine, keySetAt: l.keySetAt, canMove: l.machine && now() >= next, nextMoveAt: now() >= next ? 0 : next };
+    const next = l.moved + 7 * DAY;
+    return { id: l.id, plan: l.plan, planLabel: plan(l.plan)?.label ?? l.plan, status: this.eff(l), lifetime: l.end === 0, expiresAt: l.end, activated: l.machine, keySetAt: l.keySet, canMove: l.machine && now() >= next, nextMoveAt: now() >= next ? 0 : next };
   }
   ordView(o: Ord) {
-    return { id: o.id, plan: o.plan, planLabel: plan(o.plan)?.label ?? o.plan, amount: o.amount, token: 'USDT', network: 'TRON (TRC20)', payTo: PAY_TO, status: o.status, txid: o.txid, note: o.note, createdAt: o.createdAt, expiresAt: o.expiresAt, submittedAt: o.submittedAt, decidedAt: o.decidedAt };
+    return { id: o.id, plan: o.plan, planLabel: plan(o.plan)?.label ?? o.plan, amount: o.amount, currency: 'USD', payCurrency: o.payCurrency, status: o.status, checkoutUrl: o.status === 'pending' ? 'demo:pay' : null, createdAt: o.created, paidAt: o.paidAt };
+  }
+  adminOrder(o: Ord) {
+    return { ...this.ordView(o), userId: o.userId, userName: this.user(o.userId)?.name ?? null, providerStatus: o.providerStatus, paidAmount: o.paidAmount, invoiceId: o.invoiceId, paymentId: o.paymentId, note: o.note, updatedAt: o.updated, decidedBy: o.decidedBy };
+  }
+  adminLic(l: Lic) {
+    return { id: l.id, userId: l.userId, userName: this.user(l.userId)?.name ?? null, plan: l.plan, planLabel: plan(l.plan)?.label ?? l.plan, status: this.eff(l), lifetime: l.end === 0, startedAt: l.start, expiresAt: l.end, activated: l.machine, keySet: !!l.keySet, lastSeenAt: l.lastSeen, source: l.source, role: !!this.user(l.userId)?.role };
+  }
+  adminMember(u: User) {
+    const paid = this.orders.filter((o) => o.userId === u.id && o.status === 'paid');
+    const act = this.lics.filter((l) => l.userId === u.id && this.isActive(l));
+    return {
+      id: u.id, name: u.name, username: u.username, avatarUrl: null, banned: u.banned, owner: u.owner,
+      spent: paid.reduce((s, o) => s + Number(o.amount), 0), orders: this.orders.filter((o) => o.userId === u.id).length,
+      licences: this.lics.filter((l) => l.userId === u.id).length, activeUntil: act.length ? (act.some((l) => l.end === 0) ? 0 : Math.max(...act.map((l) => l.end))) : null,
+      role: u.role, inServer: u.inServer, joinedAt: u.joined, lastLoginAt: u.lastLogin,
+    };
   }
 }
 
@@ -92,112 +176,231 @@ export const demoStore = new Store();
 class ApiError { constructor(public status: number, public message = '') {} }
 const fail = (status: number, message = ''): never => { throw new ApiError(status, message); };
 
-function handle(method: string, path: string, body: Record<string, unknown> | null): unknown {
-  const s = demoStore;
-  const uid = s.userId();
-  const seg = path.split('/');
+function page<T>(rows: T[], q: URLSearchParams) {
+  const size = Math.min(100, Math.max(5, Number(q.get('size')) || 25));
+  const p = Math.max(1, Number(q.get('page')) || 1);
+  return { items: rows.slice((p - 1) * size, p * size), total: rows.length, page: p, size };
+}
+const matches = (q: URLSearchParams, ...fields: (string | null | undefined)[]) => {
+  const words = (q.get('q') ?? '').toLowerCase().split(/\s+/).filter(Boolean);
+  const hay = fields.filter(Boolean).join(' ').toLowerCase();
+  return words.every((w) => hay.includes(w));
+};
 
-  if (method === 'GET' && path === 'site') {
-    return { name: 'FXR OrderFlow', company: 'FXR Fluxora', discord: '', support: '', paymentsOpen: true,
-      plans: PLANS.map((p) => ({ ...p, lifetime: p.days === 0, perMonth: p.days >= 60 ? Math.round(p.price / Math.round(p.days / 30)) : null })) };
+function handle(method: string, path: string, q: URLSearchParams, body: Record<string, unknown>): unknown {
+  const s = demoStore;
+  const uid = s.me();
+  const seg = path.split('/');
+  const t = now();
+
+  if (path === 'health') return { ok: true };
+  if (path === 'site') {
+    return { name: 'FXR OrderFlow', company: 'FXR Fluxora', discord: 'https://discord.com', support: 'support@example.com', paymentsOpen: true,
+      plans: PLANS.map((p) => ({ ...p, lifetime: p.days === 0, perMonth: p.days >= 60 ? Math.round((p.price / Math.round(p.days / 30)) * 100) / 100 : null })) };
   }
-  if (method === 'GET' && path === 'auth/me') {
+  if (path === 'auth/me') {
     if (!uid) return { authenticated: false };
-    const u = s.users.find((x) => x.id === uid)!;
+    const u = s.user(uid)!;
     return { authenticated: true, user: { id: u.id, name: u.name, username: u.username, avatarUrl: null }, admin: s.persona === 'owner', adminMfaRequired: false };
   }
-  if (method === 'POST' && path === 'auth/logout') { s.persona = 'visitor'; return { ok: true }; }
+  if (path === 'auth/logout') { s.persona = 'visitor'; return { ok: true }; }
 
-  // ---- owner panel
+  // ---------- owner panel
   if (seg[0] === s.panelPath) {
     if (s.persona !== 'owner') fail(404);
     const p = seg.slice(1).join('/');
-    const b = body ?? {};
-    if (method === 'GET' && p === 'state') {
-      const toCheck = s.orders.filter((o) => o.status === 'submitted').length;
+    const ids = (body['ids'] as string[] | undefined) ?? [];
+    switch (`${method} ${seg[1]}${seg[2] ? '/' + seg[2] : ''}`) {
+      case 'GET overview': {
+        const tz = Number(q.get('tz') ?? 0) * 60_000;
+        const dayStart = Math.floor((t - tz) / DAY) * DAY + tz;
+        const paid = s.orders.filter((o) => o.status === 'paid');
+        const sum = (from: number) => paid.filter((o) => o.paidAt! >= from).reduce((a, o) => a + Number(o.amount), 0);
+        const first = Math.floor((dayStart - tz) / DAY) - 29;
+        const days = Array.from({ length: 30 }, (_, i) => {
+          const d0 = (first + i) * DAY + tz;
+          const rows = paid.filter((o) => o.paidAt! >= d0 && o.paidAt! < d0 + DAY);
+          return { day: (first + i) * DAY, amount: rows.reduce((a, o) => a + Number(o.amount), 0), orders: rows.length };
+        });
+        const act = s.lics.filter((l) => s.isActive(l));
+        const mix = new Map<string, number>();
+        act.forEach((l) => mix.set(plan(l.plan)!.label, (mix.get(plan(l.plan)!.label) ?? 0) + 1));
+        return {
+          revenue: { today: sum(dayStart), last30: sum(dayStart - 29 * DAY), total: sum(0), orders30: paid.filter((o) => o.paidAt! >= dayStart - 29 * DAY).length },
+          days,
+          stats: {
+            activeLicences: act.length, lifetime: act.filter((l) => l.end === 0).length, expiring7: act.filter((l) => l.end && l.end - t < 7 * DAY).length,
+            members: s.users.length, newMembers7: s.users.filter((u) => u.joined > t - 7 * DAY).length,
+            attention: s.orders.filter((o) => ['review', 'partially_paid', 'refunded'].includes(o.status)).length,
+            inProgress: s.orders.filter((o) => ['pending', 'confirming'].includes(o.status) && o.paymentId).length,
+            unusedCodes: s.codes.filter((c) => c.status === 'unused').length,
+          },
+          planMix: [...mix.entries()].sort((a, b) => b[1] - a[1]).map(([plan, count]) => ({ plan, count })),
+          checkout: { provider: 'NOWPayments', configured: true, payCurrency: 'usdttrc20' },
+          roleSync: true,
+        };
+      }
+      case 'GET orders': {
+        const st = q.get('status') ?? '';
+        const rows = s.orders.filter((o) =>
+          (!st || (st === 'attention' ? ['review', 'partially_paid', 'refunded'].includes(o.status) : st === 'open' ? ['pending', 'confirming'].includes(o.status) : o.status === st)) &&
+          (!q.get('plan') || o.plan === q.get('plan')) && matches(q, o.id, o.userId, s.user(o.userId)?.name, s.user(o.userId)?.username, o.paymentId, o.amount));
+        return page(rows.map((o) => s.adminOrder(o)), q);
+      }
+      case 'POST orders/recheck': { const o = s.orders.find((x) => x.id === body['id']) ?? fail(404); return { status: (o as Ord).status }; }
+      case 'POST orders/mark-paid': {
+        const o = (s.orders.find((x) => x.id === body['id']) ?? fail(404)) as Ord;
+        if (o.status === 'paid') fail(409, 'This order is already paid.');
+        o.status = 'paid'; o.paidAt = t; o.decidedBy = OWNER; o.note = String(body['note'] ?? '') || 'confirmed manually by the owner';
+        s.grant(o.userId, o.plan, 'order'); s.syncRole(o.userId);
+        s.log('paid', `Payment confirmed for order ${o.id.slice(0, 8).toUpperCase()} (${o.amount} USD)`, o.userId);
+        return { status: 'paid' };
+      }
+      case 'POST orders/cancel': {
+        let done = 0;
+        for (const o of s.orders) if (ids.includes(o.id) && o.status !== 'paid' && o.status !== 'cancelled') { o.status = 'cancelled'; done++; s.log('cancel', `Order ${o.id.slice(0, 8).toUpperCase()} cancelled by the owner`, o.userId); }
+        return { done };
+      }
+      case 'GET licences': {
+        const st = q.get('status') ?? '';
+        const rows = s.lics.filter((l) => {
+          const a = s.isActive(l);
+          const ok = !st || (st === 'active' && a) || (st === 'expiring' && a && l.end && l.end - t < 7 * DAY) || (st === 'expired' && l.status === 'active' && !a) || (st === 'lifetime' && a && l.end === 0) || (st === 'revoked' && l.status === 'revoked');
+          return ok && (!q.get('plan') || l.plan === q.get('plan')) && matches(q, l.userId, s.user(l.userId)?.name, s.user(l.userId)?.username);
+        });
+        return page(rows.map((l) => s.adminLic(l)), q);
+      }
+      case 'POST licences/grant': {
+        const u = String(body['userId'] ?? '');
+        if (!/^\d{17,20}$/.test(u)) fail(400, 'Enter a Discord user id (17-20 digits).');
+        if (!s.user(u)) s.users.push({ id: u, name: 'Member ' + u.slice(-4), username: 'member' + u.slice(-4), banned: false, owner: false, joined: t, lastLogin: 0, role: false, inServer: null });
+        const l = s.grant(u, String(body['plan']), 'panel', t, true, body['days'] ? Number(body['days']) : undefined);
+        s.syncRole(u);
+        return { id: l.id };
+      }
+      case 'POST licences/extend': {
+        let done = 0;
+        for (const l of s.lics) if (ids.includes(l.id) && l.status === 'active' && l.end !== 0) { l.end = Math.max(l.end, t) + Number(body['days']) * DAY; done++; s.log('extend', `Licence extended by ${body['days']} days by the owner`, l.userId); s.syncRole(l.userId); }
+        return { done };
+      }
+      case 'POST licences/revoke': {
+        let done = 0;
+        for (const l of s.lics) if (ids.includes(l.id) && l.status !== 'revoked') { l.status = 'revoked'; done++; s.log('revoke', 'Licence revoked by the owner', l.userId); s.syncRole(l.userId); }
+        return { done };
+      }
+      case 'POST licences/reset-machine': { const l = (s.lics.find((x) => x.id === body['id']) ?? fail(404)) as Lic; l.machine = false; s.log('reset', 'Computer reset by the owner', l.userId); return { ok: true }; }
+      case 'GET members': {
+        const f = q.get('filter') ?? '';
+        const rows = s.users.filter((u) => {
+          const any = s.lics.some((l) => l.userId === u.id);
+          const a = s.active(u.id);
+          const ok = !f || (f === 'active' && a) || (f === 'expired' && any && !a) || (f === 'none' && !any) || (f === 'banned' && u.banned);
+          return ok && matches(q, u.id, u.name, u.username);
+        }).sort((a, b) => b.lastLogin - a.lastLogin);
+        return page(rows.map((u) => s.adminMember(u)), q);
+      }
+      case 'POST members/ban': case 'POST members/unban': {
+        const ban = seg[2] === 'ban';
+        let done = 0;
+        for (const u of s.users) if (ids.includes(u.id) && !u.owner) { u.banned = ban; done++; s.log('ban', `Member ${ban ? 'banned' : 'unbanned'} by the owner`, u.id); }
+        return { done };
+      }
+      case 'POST members/logout': { const n = s.sessions.filter((x) => x.userId === body['id'] && !x.current).length; s.sessions = s.sessions.filter((x) => x.userId !== body['id'] || x.current); return { ended: n }; }
+      case 'POST members/sync-role': return { result: s.syncRole(String(body['id'])) };
+      case 'GET codes': {
+        const st = q.get('status') ?? '';
+        const rows = s.codes.filter((c) => (!st || c.status === st) && (!q.get('batch') || c.batch === q.get('batch')) && matches(q, c.hint, c.batch, c.usedBy, s.user(c.usedBy ?? '')?.name));
+        const batches = [...new Set(s.codes.map((c) => c.batch).filter(Boolean))].map((b) => ({ batch: b!, n: s.codes.filter((c) => c.batch === b).length, used: s.codes.filter((c) => c.batch === b && c.status === 'used').length }));
+        return { ...page(rows.map((c) => ({ id: c.id, hint: c.hint, plan: c.plan, days: c.days, status: c.status, batch: c.batch, createdAt: c.created, usedBy: c.usedBy, usedByName: s.user(c.usedBy ?? '')?.name ?? null, usedAt: c.usedAt })), q), batches };
+      }
+      case 'POST codes/generate': {
+        const pl = plan(String(body['plan'])) ?? fail(404, 'Unknown plan');
+        const out: string[] = [];
+        for (let i = 0; i < Number(body['count']); i++) {
+          const g = [group(), group(), group(), group()];
+          const raw = 'RDM-' + g.join('-');
+          out.push(raw);
+          s.codes.unshift({ id: id(), hint: g[3], raw, plan: (pl as typeof PLANS[0]).id, days: (pl as typeof PLANS[0]).days, status: 'unused', batch: String(body['batch'] || '') || null, created: t, usedBy: null, usedAt: null });
+        }
+        s.log('codes', `${out.length} redeem key(s) generated (${(pl as typeof PLANS[0]).label})`, null);
+        return { codes: out };
+      }
+      case 'POST codes/disable': {
+        let done = 0;
+        for (const c of s.codes) if (ids.includes(c.id) && c.status === 'unused') { c.status = 'disabled'; done++; }
+        return { done };
+      }
+      case 'GET events': {
+        const k = q.get('kind') ?? '';
+        const rows = s.events.filter((e) => (!k || e.kind === k) && matches(q, e.text, e.userId, s.user(e.userId ?? '')?.name));
+        return page(rows.map((e) => ({ id: e.id, at: e.at, kind: e.kind, text: e.text, userId: e.userId, userName: s.user(e.userId ?? '')?.name ?? null })), q);
+      }
+    }
+    if (method === 'GET' && seg[1] === 'members' && seg[2]) {
+      const u = s.user(seg[2]) ?? fail(404);
+      const m = u as User;
       return {
-        payAddress: PAY_TO, usdtContract: USDT,
-        stats: { total: s.lics.length, active: s.lics.filter((l) => s.isActive(l)).length, expiringSoon: s.lics.filter((l) => s.isActive(l) && l.endMs && l.endMs - now() < 7 * DAY).length, toCheck, members: s.users.length },
-        plans: PLANS,
-        orders: [...s.orders].sort((a, b2) => Number(b2.status === 'submitted') - Number(a.status === 'submitted') || b2.createdAt - a.createdAt).map((o) => ({ ...s.ordView(o), userId: o.userId, userName: s.name(o.userId) })),
-        licences: s.lics.map((l) => ({ id: l.id, userRef: l.userRef, userName: s.name(l.userRef), plan: l.plan, status: s.effStatus(l), lifetime: l.endMs === 0, expiresAt: l.endMs, activated: l.machine, keySet: !!l.keySetAt, lastSeenAt: l.lastSeenAt, source: l.source, createdAt: l.createdAt })),
-        members: s.users.map((u) => ({ ...u, licences: s.lics.filter((l) => l.userRef === u.id).length })),
-        events: s.events.slice(0, 60),
+        user: { id: m.id, name: m.name, username: m.username, avatarUrl: null, banned: m.banned, owner: m.owner, joinedAt: m.joined, lastLoginAt: m.lastLogin, role: m.role, inServer: m.inServer },
+        spent: s.adminMember(m).spent,
+        licences: s.lics.filter((l) => l.userId === m.id).map((l) => s.adminLic(l)),
+        orders: s.orders.filter((o) => o.userId === m.id).map((o) => s.adminOrder(o)),
+        sessions: s.sessions.filter((x) => x.userId === m.id).map((x) => ({ device: x.device, lastSeenAt: x.lastSeen, createdAt: x.created, owner: m.owner })),
+        codes: s.codes.filter((c) => c.usedBy === m.id).map((c) => ({ hint: c.hint, plan: c.plan, days: c.days, usedAt: c.usedAt })),
+        events: s.events.filter((e) => e.userId === m.id).slice(0, 40).map((e) => ({ at: e.at, kind: e.kind, text: e.text })),
       };
     }
-    const o = s.orders.find((x) => x.id === b['id']);
-    const l = s.lics.find((x) => x.id === b['id']);
-    const u = s.users.find((x) => x.id === b['id']);
-    switch (p) {
-      case 'orders/confirm':
-        if (!o) fail(404);
-        if (o!.status !== 'submitted') fail(409, 'Only a submitted payment can be confirmed.');
-        s.grant(o!.userId, o!.plan, 'order');
-        o!.status = 'paid'; o!.decidedAt = now();
-        s.log('confirm', `order (${o!.amount} USDT) confirmed by owner`);
-        return s.ordView(o!);
-      case 'orders/reject':
-        if (!o) fail(404);
-        o!.status = 'rejected'; o!.note = String(b['note'] ?? '') || null; o!.decidedAt = now();
-        s.log('reject', 'order rejected by owner');
-        return s.ordView(o!);
-      case 'licences/create': {
-        if (!/^\d{17,20}$/.test(String(b['userRef']))) fail(400, 'userRef must be a Discord user id');
-        if (!s.users.some((x) => x.id === b['userRef'])) s.users.push({ id: String(b['userRef']), name: 'Member ' + String(b['userRef']).slice(-4), username: 'member', banned: false, lastLoginAt: 0, owner: false });
-        return { id: s.grant(String(b['userRef']), String(b['plan']), 'panel').id };
-      }
-      case 'licences/revoke': if (!l) fail(404); l!.status = 'revoked'; s.log('revoke', 'licence revoked by owner'); return { ok: true };
-      case 'licences/reset-machine': if (!l) fail(404); l!.machine = false; s.log('reset', 'computer reset by owner'); return { ok: true };
-      case 'members/ban': if (!u || u.owner) fail(404); u!.banned = true; s.log('ban', `member ${u!.id} banned`); return { ok: true };
-      case 'members/unban': if (!u) fail(404); u!.banned = false; s.log('ban', `member ${u!.id} unbanned`); return { ok: true };
-      case 'members/logout': s.log('sessions', `sessions of ${String(b['id'])} ended`); return { ok: true, ended: 1 };
-    }
-    fail(404);
+    void p;
+    return fail(404);
   }
 
-  // ---- signed-in member
-  if (path.startsWith('account') || path.startsWith('orders')) {
+  // ---------- signed-in member
+  if (seg[0] === 'account' || seg[0] === 'orders') {
     if (!uid) fail(401);
+    const u = s.user(uid!)!;
     if (method === 'GET' && path === 'account') {
-      return { licences: s.lics.filter((l) => l.userRef === uid).map((l) => s.licView(l)), orders: s.orders.filter((o) => o.userId === uid).map((o) => s.ordView(o)) };
+      return {
+        licences: s.lics.filter((l) => l.userId === uid).map((l) => s.licView(l)),
+        orders: s.orders.filter((o) => o.userId === uid).map((o) => s.ordView(o)),
+        discord: { invite: 'https://discord.com', roleSync: true, roleGranted: u.role, inServer: u.inServer },
+        activity: s.events.filter((e) => e.userId === uid).slice(0, 30).map((e) => ({ at: e.at, kind: e.kind, text: e.text })),
+      };
     }
     if (seg[0] === 'account' && seg[1] === 'licences') {
-      const l = s.lics.find((x) => x.id === seg[2] && x.userRef === uid);
-      if (!l || l.status === 'revoked') fail(404);
-      if (seg[3] === 'key') { l!.keySetAt = now(); s.log('key', 'owner of a licence generated a new key'); return { key: newKey() }; }
-      if (seg[3] === 'move') { if (!l!.machine) return { ok: true, nextMoveAt: 0 }; l!.machine = false; l!.movedAt = now(); return { ok: true, nextMoveAt: now() + 7 * DAY }; }
+      const l = (s.lics.find((x) => x.id === seg[2] && x.userId === uid) ?? fail(404)) as Lic;
+      if (seg[3] === 'key') { l.keySet = t; s.log('key', 'New licence key generated (the previous one stopped working)', uid); return { key: 'FXR-' + [group(), group(), group(), group()].join('-') }; }
+      if (seg[3] === 'move') { l.machine = false; l.moved = t; s.log('move', 'Computer released to move the licence', uid); return { ok: true, nextMoveAt: t + 7 * DAY }; }
+    }
+    if (path === 'account/redeem') {
+      const code = String(body['code'] ?? '').toUpperCase();
+      const c = s.codes.find((x) => x.status === 'unused' && (x.raw === code || (!x.raw && code.endsWith(x.hint))));
+      if (!c) fail(404, 'This key is not valid or has already been used.');
+      c!.status = 'used'; c!.usedBy = uid; c!.usedAt = t;
+      const l = s.grant(uid!, c!.plan, 'redeem', t, true, c!.days);
+      s.log('redeem', `Redeem key …${c!.hint} activated (${c!.days ? '+' + c!.days + ' days' : 'lifetime'})`, uid);
+      s.syncRole(uid!);
+      return { plan: c!.plan, days: c!.days, expiresAt: l.end };
+    }
+    if (path === 'account/discord/sync') return { result: s.syncRole(uid!) };
+    if (path === 'account/sessions') return s.sessions.filter((x) => x.userId === uid).map((x) => ({ id: x.id, current: x.current, device: x.device, createdAt: x.created, lastSeenAt: x.lastSeen, expiresAt: x.expires }));
+    if (path === 'account/sessions/revoke') { s.sessions = s.sessions.filter((x) => !(x.userId === uid && x.id === body['id'] && !x.current)); s.log('security', 'A session was signed out', uid); return { ok: true }; }
+    if (path === 'account/sessions/revoke-others') {
+      const n = s.sessions.filter((x) => x.userId === uid && !x.current).length;
+      s.sessions = s.sessions.filter((x) => x.userId !== uid || x.current);
+      s.log('security', `Signed out of ${n} other session(s)`, uid);
+      return { ok: true, ended: n };
     }
     if (method === 'POST' && path === 'orders') {
-      const p = plan(String(body?.['plan']));
-      if (!p) fail(404, 'Unknown plan');
-      const same = s.orders.find((o) => o.userId === uid && o.plan === p!.id && o.status === 'pending');
-      if (same) return s.ordView(same);
-      const used = new Set(s.orders.filter((o) => o.status === 'pending' || o.status === 'submitted').map((o) => o.amount));
-      let amount = '';
-      do { amount = `${p!.price}.${String(1 + Math.floor(Math.random() * 99)).padStart(2, '0')}`; } while (used.has(amount));
-      const o: Ord = { id: id(), userId: uid!, plan: p!.id, amount, status: 'pending', txid: null, note: null, createdAt: now(), expiresAt: now() + DAY, submittedAt: null, decidedAt: null };
+      if (body['acceptTerms'] !== true) fail(400, 'Please accept the Terms and the Risk disclosure to continue.');
+      const p = (plan(String(body['plan'])) ?? fail(404, 'Unknown plan')) as typeof PLANS[0];
+      const o: Ord = { id: hex(12), userId: uid!, plan: p.id, amount: p.price.toFixed(2), status: 'pending', providerStatus: null, payCurrency: null, paidAmount: null, invoiceId: String(4900000 + s.orders.length), paymentId: null, note: null, created: t, updated: t, paidAt: null, decidedBy: null };
       s.orders.unshift(o);
-      s.log('order', `order opened by ${uid}: ${p!.id} for ${amount} USDT`);
+      s.log('order', `Order ${o.id.slice(0, 8).toUpperCase()} opened: ${p.label}, ${o.amount} USD`, uid);
       return s.ordView(o);
     }
     if (seg[0] === 'orders' && seg[1]) {
-      const o = s.orders.find((x) => x.id === seg[1] && x.userId === uid);
-      if (!o) fail(404);
-      if (method === 'GET' && seg.length === 2) return s.ordView(o!);
-      if (seg[2] === 'txid') {
-        if (o!.status !== 'pending') fail(409, 'This order is not waiting for a payment.');
-        const t = String(body?.['txid'] ?? '').trim().toLowerCase();
-        if (!/^[0-9a-f]{64}$/.test(t)) fail(409, 'A TRON transaction ID is 64 characters (0-9, a-f).');
-        if (s.orders.some((x) => x.txid === t)) fail(409, 'This transaction ID was already submitted.');
-        o!.txid = t; o!.status = 'submitted'; o!.submittedAt = now();
-        s.log('payment', `order: transaction id submitted by ${uid}`);
-        return s.ordView(o!);
-      }
-      if (seg[2] === 'cancel') {
-        if (o!.status !== 'pending') fail(409, 'Only an unpaid order can be cancelled.');
-        o!.status = 'cancelled';
-        return s.ordView(o!);
-      }
+      const o = (s.orders.find((x) => x.id === seg[1] && x.userId === uid) ?? fail(404)) as Ord;
+      if (method === 'GET') return s.ordView(o);
+      if (seg[2] === 'cancel') { if (o.status !== 'pending') fail(409, 'Only an order that has not been paid can be cancelled.'); o.status = 'cancelled'; return s.ordView(o); }
     }
   }
   return fail(404);
@@ -205,17 +408,19 @@ function handle(method: string, path: string, body: Record<string, unknown> | nu
 
 export const demoInterceptor: HttpInterceptorFn = (req, next) => {
   if (!req.url.startsWith('/api/')) return next(req);
-  const path = req.url.slice(5).split('?')[0];
-  return timer(120).pipe(
+  const [path, qs] = req.url.slice(5).split('?');
+  const q = new URLSearchParams(qs ?? '');
+  req.params.keys().forEach((k) => q.set(k, req.params.get(k) ?? ''));
+  return timer(140).pipe(
     mergeMap((): Observable<HttpResponse<unknown>> => {
       try {
-        const body = handle(req.method, path, (req.body as Record<string, unknown> | null) ?? null);
+        const body = handle(req.method, path, q, (req.body as Record<string, unknown> | null) ?? {});
         return of(new HttpResponse({ status: req.method === 'POST' ? 201 : 200, body, url: req.url }));
       } catch (e) {
         const err = e instanceof ApiError ? e : new ApiError(500);
+        if (!(e instanceof ApiError)) console.warn('[demo api]', e);
         return throwError(() => new HttpErrorResponse({ status: err.status, error: { statusCode: err.status, message: err.message }, url: req.url }));
       }
     }),
-    map((r) => r),
   );
 };

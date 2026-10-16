@@ -83,7 +83,7 @@ export class LicencesService {
     );
     if (current) {
       if (current.end_ms === 0) {
-        this.db.logEvent('grant', `licence ${current.id} is already lifetime; ${planId} via ${source} added nothing`, userRef);
+        this.db.logEvent('grant', `Licence is already lifetime: ${this.plan(planId)?.label ?? planId} from ${sourceLabel(source)} added no time`, userRef);
         return current;
       }
       const end = days === 0 ? 0 : Math.max(current.end_ms, now) + days * 86400_000;
@@ -91,7 +91,7 @@ export class LicencesService {
         'UPDATE licences SET plan = ?, end_ms = ?, order_id = COALESCE(?, order_id), updated_ms = ? WHERE id = ?',
         planId, end, orderId || null, now, current.id,
       );
-      this.db.logEvent('renew', `licence of ${userRef} extended: ${planId} via ${source}`, userRef);
+      this.db.logEvent('renew', `Licence extended: ${this.plan(planId)?.label ?? planId} from ${sourceLabel(source)}`, userRef);
       return this.byId(current.id)!;
     }
     const id = newId();
@@ -102,7 +102,7 @@ export class LicencesService {
        VALUES (?,?,?,?,?,?,?,?,NULL,?,NULL,?,?,NULL,NULL)`,
       id, userRef, planId, sha256(LicencesService.newKey() + newId()), LIC_ACTIVE, source, now, end, orderId || null, now, now,
     );
-    this.db.logEvent('issue', `licence created for ${userRef}: ${planId} via ${source}`, userRef);
+    this.db.logEvent('issue', `Licence activated: ${this.plan(planId)?.label ?? planId} from ${sourceLabel(source)}`, userRef);
     return this.byId(id)!;
   }
 
@@ -138,7 +138,7 @@ export class LicencesService {
     const raw = LicencesService.newKey();
     const now = Date.now();
     this.db.run('UPDATE licences SET key_hash = ?, key_set_ms = ?, updated_ms = ? WHERE id = ?', sha256(raw), now, now, id);
-    this.db.logEvent('key', 'new licence key generated', userRef);
+    this.db.logEvent('key', 'New licence key generated (the previous one stopped working)', userRef);
     return raw;
   }
 
@@ -151,7 +151,7 @@ export class LicencesService {
     if (!l.machine_id) return { ok: true, nextMoveAt: next };
     if (now < next) return { ok: false, nextMoveAt: next };
     this.db.run('UPDATE licences SET machine_id = NULL, machine_moved_ms = ?, updated_ms = ? WHERE id = ?', now, now, id);
-    this.db.logEvent('move', 'computer released (move to another PC)', userRef);
+    this.db.logEvent('move', 'Computer released to move the licence', userRef);
     return { ok: true, nextMoveAt: now + MOVE_COOLDOWN_MS };
   }
 
@@ -160,7 +160,7 @@ export class LicencesService {
     const l = this.byId(id);
     if (!l || l.status === LIC_REVOKED) return null;
     this.db.run('UPDATE licences SET status = ?, updated_ms = ? WHERE id = ?', LIC_REVOKED, Date.now(), id);
-    this.db.logEvent('revoke', `licence of ${l.user_ref} revoked by ${by}`, l.user_ref);
+    this.db.logEvent('revoke', `Licence revoked by the owner`, l.user_ref);
     return l.user_ref;
   }
 
@@ -170,7 +170,7 @@ export class LicencesService {
     if (!l || l.status === LIC_REVOKED || l.end_ms === 0) return null;
     const now = Date.now();
     this.db.run('UPDATE licences SET end_ms = ?, updated_ms = ? WHERE id = ?', Math.max(l.end_ms, now) + days * 86400_000, now, id);
-    this.db.logEvent('extend', `licence of ${l.user_ref} extended by ${days} days by ${by}`, l.user_ref);
+    this.db.logEvent('extend', `Licence extended by ${days} days by the owner`, l.user_ref);
     return l.user_ref;
   }
 
@@ -178,7 +178,7 @@ export class LicencesService {
     const l = this.byId(id);
     if (!l) return false;
     this.db.run('UPDATE licences SET machine_id = NULL, updated_ms = ? WHERE id = ?', Date.now(), id);
-    this.db.logEvent('reset', `computer of ${l.user_ref} reset by ${by}`, l.user_ref);
+    this.db.logEvent('reset', `Computer reset by the owner`, l.user_ref);
     return true;
   }
 
@@ -232,4 +232,13 @@ export class LicencesService {
     }
     return { total: rows.length, active, expiringSoon: soon };
   }
+}
+
+/** How a licence change came about, in the member's words. */
+function sourceLabel(source: string): string {
+  if (source === 'order') return 'a payment';
+  if (source === 'redeem') return 'a redeem key';
+  if (source === 'webhook') return 'a payment';
+  if (source.startsWith('panel')) return 'the owner';
+  return source;
 }

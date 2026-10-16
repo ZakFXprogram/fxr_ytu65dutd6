@@ -78,7 +78,7 @@ export class RoleSyncService implements OnModuleInit, OnModuleDestroy {
         const st = await this.call('PUT', userId);
         if (st === 204 || st === 200) {
           this.db.run('UPDATE users SET role_state = 1, in_guild = 1 WHERE id = ?', userId);
-          if (u.role_state !== 1) this.db.logEvent('role', `Discord role given to ${userId}`, userId);
+          if (u.role_state !== 1) this.db.logEvent('role', 'Discord member role added', userId);
           return u.role_state === 1 ? 'unchanged' : 'granted';
         }
         if (st === 404) {
@@ -91,7 +91,7 @@ export class RoleSyncService implements OnModuleInit, OnModuleDestroy {
         const st = await this.call('DELETE', userId);
         if (st === 204 || st === 200 || st === 404) {
           this.db.run('UPDATE users SET role_state = 0 WHERE id = ?', userId);
-          this.db.logEvent('role', `Discord role removed from ${userId} (no active licence)`, userId);
+          this.db.logEvent('role', 'Discord member role removed (no active licence)', userId);
           return 'removed';
         }
         return 'error';
