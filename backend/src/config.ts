@@ -130,13 +130,13 @@ export function loadConfig(): AppConfig {
   if (cfg.nowpayments.apiKey && !cfg.nowpayments.ipnSecret) problems.push('NOWPAYMENTS_IPN_SECRET (required with NOWPAYMENTS_API_KEY)');
   if (!/^[a-z0-9]{2,20}$/.test(cfg.nowpayments.payCurrency)) problems.push('NOWPAYMENTS_PAY_CURRENCY');
   const b = cfg.bot;
-  if ((b.token || b.guildId || b.roleId) && !(b.token && /^\d{17,20}$/.test(b.guildId) && /^\d{17,20}$/.test(b.roleId))) {
-    problems.push('DISCORD_BOT_TOKEN / DISCORD_GUILD_ID / DISCORD_MEMBER_ROLE_ID (all three, ids are numbers)');
-  }
+  // The ids can be set before the bot token: role sync starts once all three are present.
+  if (b.guildId && !/^\d{17,20}$/.test(b.guildId)) problems.push('DISCORD_GUILD_ID (a number)');
+  if (b.roleId && !/^\d{17,20}$/.test(b.roleId)) problems.push('DISCORD_MEMBER_ROLE_ID (a number)');
+  if (b.token && !(b.guildId && b.roleId)) problems.push('DISCORD_GUILD_ID / DISCORD_MEMBER_ROLE_ID (required with DISCORD_BOT_TOKEN)');
   if (production) {
     if (cfg.appSecret.length < 32) problems.push('APP_SECRET (32+ chars)');
     // Missing Discord keys or owner ids do not stop the site: sign-in (and so the panel) stays closed until they are set.
-    if (!!cfg.discord.clientId !== !!cfg.discord.clientSecret) problems.push('DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET (set both)');
   }
   if (problems.length) throw new Error('missing/invalid variables: ' + problems.join(', '));
 

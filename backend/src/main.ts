@@ -99,7 +99,7 @@ async function bootstrap(): Promise<void> {
   if (!cfg.production) log.warn(`DEV MODE — panel at ${cfg.publicUrl}${panelPage}`);
   if (!cfg.nowpayments.apiKey) log.warn('NOWPAYMENTS_API_KEY is not set: checkout is closed');
   if (!cfg.bot.token) log.warn('DISCORD_BOT_TOKEN is not set: Discord roles are not synced');
-  if (!cfg.discord.clientId) log.warn('DISCORD_CLIENT_ID is not set: sign-in is disabled');
+  if (!cfg.discord.clientId || !cfg.discord.clientSecret) log.warn('DISCORD_CLIENT_ID / DISCORD_CLIENT_SECRET not both set: sign-in is disabled');
   if (cfg.adminIds.size === 0) log.warn('ADMIN_DISCORD_IDS is not set: nobody can open the owner panel');
 }
 
