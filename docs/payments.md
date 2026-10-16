@@ -150,3 +150,7 @@ transfer it knows (any token, any recipient), so the site's own filters are exer
 failed transaction, sources that disagree, node lagging behind the index, exact amount, late payment, cancelled order,
 round amount + txid, txid replay on another order, txid older than the order, claim of another order's exact payment,
 short payment, owner assign / set aside, address change alert, data at rest.
+
+`tests/e2e/real_tron_fixtures.test.js` feeds **real** TronGrid responses (captured from api.trongrid.io on 2026-10-17:
+a plain USDT transfer, and a transaction sent through a router contract that pays two wallets at once) to the parser,
+so the field names and log decoding are checked against the actual API, not only against the mock.
