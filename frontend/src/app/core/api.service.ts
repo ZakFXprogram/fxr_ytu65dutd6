@@ -84,6 +84,7 @@ export class ApiService {
   publishPost(postId: string, channelId: string): Observable<{ ok: boolean; messageId: string; edited: boolean }> { return this.http.post<{ ok: boolean; messageId: string; edited: boolean }>(this.p('bot/publish-post'), { postId, channelId }); }
   publishJar(channelId?: string): Observable<{ ok: boolean; messageId: string; version: string }> { return this.http.post<{ ok: boolean; messageId: string; version: string }>(this.p('bot/publish-jar'), { channelId }); }
   runReminders(): Observable<{ ok: boolean; sent?: number; failed?: number; error?: string }> { return this.http.post<{ ok: boolean; sent?: number; failed?: number; error?: string }>(this.p('bot/run-reminders'), {}); }
+  createInvite(channelId?: string): Observable<{ ok: boolean; url: string }> { return this.http.post<{ ok: boolean; url: string }>(this.p('bot/create-invite'), { channelId }); }
 }
 
 export interface BotStatus {
@@ -94,6 +95,8 @@ export interface BotStatus {
   affiliateRole: boolean;
   downloadsChannel: boolean;
   interactionsUrl: string;
+  invite: string;
+  botInvite: boolean;
 }
 export interface BotPost {
   id: string;

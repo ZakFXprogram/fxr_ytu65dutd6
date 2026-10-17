@@ -39,7 +39,7 @@ export class AccountController {
       licences: this.licences.forUser(a.user.id).map((l) => this.licences.view(l)),
       orders: this.orders.forUser(a.user.id).map((o) => this.orders.view(o)),
       discord: {
-        invite: this.cfg.discordInvite,
+        invite: this.db.getMeta('discord_invite') || this.cfg.discordInvite,
         roleSync: this.roles.configured,
         roleGranted: u?.role_state === 1,
         inServer: u?.in_guild === null || u?.in_guild === undefined ? null : u.in_guild === 1,

@@ -35,6 +35,21 @@ import { ApiService, apiError, type BotStatus, type BotPost } from '../../core/a
           <button class="btn btn-sm" [disabled]="busy()" (click)="register()">Enregistrer les commandes</button>
         </div>
 
+        <!-- invite -->
+        <div class="card" style="padding:16px;margin-top:14px">
+          <h3 style="margin:0 0 6px">Invitation du serveur</h3>
+          <p class="mut small" style="margin:0 0 10px">Crée une invitation <strong>par le bot</strong> (affichée « Invité par FXR », sans ton nom). Le site l'utilise ensuite partout. Le bot a besoin de la permission « Créer une invitation ».</p>
+          <div class="postact" style="margin-bottom:8px">
+            <input [(ngModel)]="inviteChannel" placeholder="ID d'un salon public (défaut : #téléchargements)" class="inp-sm" style="width:260px" />
+            <button class="btn btn-sm" [disabled]="busy()" (click)="createInvite()">Créer l'invitation</button>
+          </div>
+          @if (s.invite) {
+            <div>Actuelle @if (!s.botInvite) { <span class="small faint">(créée par toi — remplace-la)</span> } :
+              <code class="copyable" (click)="copy(s.invite)">{{ s.invite }}</code>
+            </div>
+          }
+        </div>
+
         <!-- jar -->
         <div class="card" style="padding:16px;margin-top:14px">
           <h3 style="margin:0 0 6px">Publier le jar</h3>
@@ -86,6 +101,7 @@ export class PanelDiscordComponent {
   status = signal<BotStatus | null>(null);
   posts = signal<BotPost[]>([]);
   channel: Record<string, string> = {};
+  inviteChannel = '';
   busy = signal(false);
   msg = signal('');
   err = signal('');
@@ -114,6 +130,9 @@ export class PanelDiscordComponent {
   }
   publishJar(): void {
     this.run(this.api.publishJar(), (r) => `✅ Jar v${r.version} publié.`);
+  }
+  createInvite(): void {
+    this.run(this.api.createInvite(this.inviteChannel.trim() || undefined), (r) => `✅ Invitation créée : ${r.url}`);
   }
   publishPost(id: string): void {
     this.run(this.api.publishPost(id, (this.channel[id] || '').trim()), (r) => (r.edited ? '✅ Message mis à jour.' : '✅ Message publié.'));

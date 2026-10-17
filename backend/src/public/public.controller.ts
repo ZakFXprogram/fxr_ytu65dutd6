@@ -1,17 +1,21 @@
 import { Controller, Get, Inject } from '@nestjs/common';
 import { CONFIG, type AppConfig } from '../config';
+import { DbService } from '../db/db.service';
 
 /** Everything the public website needs before sign-in. */
 @Controller('api')
 export class PublicController {
-  constructor(@Inject(CONFIG) private readonly cfg: AppConfig) {}
+  constructor(
+    @Inject(CONFIG) private readonly cfg: AppConfig,
+    private readonly db: DbService,
+  ) {}
 
   @Get('site')
   site() {
     return {
       name: 'FXR OrderFlow',
       company: this.cfg.company,
-      discord: this.cfg.discordInvite,
+      discord: this.db.getMeta('discord_invite') || this.cfg.discordInvite,
       support: this.cfg.supportEmail,
       paymentsOpen: !!this.cfg.tron.address,
       plans: this.cfg.plans.map((p) => ({

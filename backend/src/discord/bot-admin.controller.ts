@@ -50,7 +50,21 @@ export class BotAdminController {
       affiliateRole: b.affiliateRoleId ? true : false,
       downloadsChannel: b.downloadsChannelId ? true : false,
       interactionsUrl: `${this.cfg.publicUrl}/api/discord/interactions`,
+      invite: this.db.getMeta('discord_invite') || this.cfg.discordInvite || '',
+      botInvite: !!this.db.getMeta('discord_invite'),
     };
+  }
+
+  /** Has the bot create a permanent server invite, so every "Join" link reads "Invited by FXR", not a person. */
+  @Post('create-invite')
+  async createInvite(@CurrentAuth() a: AuthContext, @Body() dto: PublishJarDto) {
+    if (!this.bot.configured) throw new BadRequestException('Bot non configuré');
+    const channelId = dto.channelId || this.cfg.bot.downloadsChannelId;
+    if (!SNOWFLAKE.test(channelId)) throw new BadRequestException("Donne l'ID d'un salon public où créer l'invitation");
+    const url = await this.discord(() => this.bot.createInvite(channelId));
+    this.db.setMeta('discord_invite', url);
+    this.db.logEvent('bot', `Invitation du serveur créée par le bot (${a.user.id})`);
+    return { ok: true, url };
   }
 
   /** Registers (overwrites) the slash commands on the guild. Safe to run again; one call replaces the set. */
@@ -77,7 +91,7 @@ export class BotAdminController {
       }
       if (status === 403) {
         throw new BadRequestException(
-          'Discord : accès refusé (403). Le bot doit être sur le serveur, son rôle au-dessus des rôles gérés, avec Gérer les rôles / Envoyer des messages.',
+          "Discord : accès refusé (403). Le bot a besoin de la permission concernée (Gérer les rôles, Envoyer des messages, ou Créer une invitation), et son rôle doit être au-dessus des rôles gérés.",
         );
       }
       if (status === 404) throw new BadRequestException('Discord : introuvable (404). Vérifie le salon / le serveur.');

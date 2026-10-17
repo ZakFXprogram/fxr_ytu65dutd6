@@ -110,6 +110,19 @@ export class BotService {
     }
   }
 
+  // ---------------------------------------------------------------- invites
+
+  /** Creates a permanent, unlimited server invite as the bot (shows "Invited by <bot>"). Returns the URL. */
+  async createInvite(channelId: string): Promise<string> {
+    const r = await this.api('POST', `/channels/${channelId}/invites`, {
+      max_age: 0,
+      max_uses: 0,
+      temporary: false,
+      unique: false,
+    });
+    return `https://discord.gg/${r.code as string}`;
+  }
+
   // ---------------------------------------------------------------- slash commands
 
   /** Registers (overwrites) the guild slash commands. One call replaces the whole set. */
