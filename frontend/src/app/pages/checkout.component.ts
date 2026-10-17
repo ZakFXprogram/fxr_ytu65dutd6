@@ -105,7 +105,7 @@ const TRONSCAN = 'https://tronscan.org/#/transaction/';
                 <h1 style="font-size:clamp(28px,3.6vw,40px);margin-top:20px">You're in</h1>
                 <p class="lead" style="margin:0 auto 24px">Payment confirmed {{ fmt.dt(o.paidAt) }}. Your licence is active and your Discord role is on its way.</p>
                 <div class="row" style="justify-content:center">
-                  <a class="btn btn-primary" routerLink="/dashboard/licence">Get my licence key</a>
+                  <a class="btn btn-primary" routerLink="/dashboard/licence">My licence</a>
                   @if (site.info()?.discord) { <a class="btn btn-discord" [href]="site.info()!.discord" target="_blank" rel="noopener noreferrer">Open Discord to install</a> }
                 </div>
                 @if (o.txid) { <p class="small faint" style="margin-top:18px">Transaction <a class="txlink" [href]="tronscan + o.txid" target="_blank" rel="noopener noreferrer">{{ o.txid.slice(0, 12) }}…{{ o.txid.slice(-6) }}</a></p> }

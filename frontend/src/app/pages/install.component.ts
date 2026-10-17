@@ -33,8 +33,8 @@ import { RevealDirective, SpotDirective } from '../core/motion';
           <p>Sign in with Discord, choose a plan and pay in USDT. Your licence activates as soon as the payment is confirmed.</p>
         </div>
         <div class="card step" fxrSpot fxrReveal="200">
-          <h3>Open the install channel</h3>
-          <p>Your role unlocks the private channel with the FXR Loader download link and the guide. Paste your key from the <a routerLink="/dashboard/licence">dashboard</a> and you are done.</p>
+          <h3>Install and sign in</h3>
+          <p>Your role unlocks <strong>#téléchargements</strong> with the FXR Loader download. In MotiveWave, add <strong>Study → FXR OrderFlow → Loader</strong>, click <strong>Authorize</strong> on the Discord page, and the <strong>FXR Studies</strong> menu appears. No key to type.</p>
         </div>
       </div>
     </section>
@@ -52,7 +52,7 @@ import { RevealDirective, SpotDirective } from '../core/motion';
         </div>
         <div class="card" fxrSpot fxrReveal="100">
           <h3>Already a member?</h3>
-          <p class="mut">Your licence key, your computer and your Discord role are all on your dashboard.</p>
+          <p class="mut">Your licence status and how to load the studies are on your dashboard.</p>
           @if (session.signedIn()) {
             <a class="btn btn-primary" routerLink="/dashboard">Open my dashboard</a>
           } @else {

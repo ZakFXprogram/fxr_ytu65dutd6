@@ -146,12 +146,12 @@ export class HomeComponent {
   why = [
     { i: 'tick', t: 'Every tick, not summaries', d: 'Studies read each print with its bid/ask side, so a 300-lot fill shows up as a 300-lot fill.' },
     { i: 'layers', t: 'Market by order', d: 'Deep Trades uses MBO data to show whether size came from one order or a crowd, and what it hit.' },
-    { i: 'bolt', t: 'One loader, auto-updates', d: 'Install FXR Loader once. New versions and new studies arrive without touching your files again.' },
-    { i: 'shield', t: 'Your licence, your account', d: 'Access is tied to your Discord account and one computer, and you move it yourself when you change PC.' },
+    { i: 'bolt', t: 'One loader, every study', d: 'Install FXR Loader once, sign in with Discord, and all the studies unlock in MotiveWave from a single menu.' },
+    { i: 'shield', t: 'Your licence, your account', d: 'Access is tied to your Discord account, not a computer — so it works on all of your own machines, with no key to type.' },
   ];
   steps = [
     { t: 'Sign in with Discord', d: 'Your licence lives on your Discord account. No password to create, nothing to remember.' },
     { t: 'Pay in USDT', d: 'Send the exact amount shown to our TRON address. The blockchain confirms it, your access turns on by itself.' },
-    { t: 'Install from Discord', d: 'Your role unlocks the install channel: download FXR Loader, paste your key from the dashboard, done.' },
+    { t: 'Install from Discord', d: 'Your role unlocks the install channel: download FXR Loader, add it in MotiveWave and authorize with Discord. Done.' },
   ];
 }

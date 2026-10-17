@@ -29,7 +29,7 @@ import { IconComponent } from '../../core/icon.component';
         <h3 style="margin:12px 0 6px">{{ d.days ? '+' + d.days + ' days added' : 'Lifetime access unlocked' }}</h3>
         <p class="mut" style="margin:0">{{ d.expiresAt ? 'Your licence is active until ' + fmt.date(d.expiresAt) + '.' : 'Your licence no longer expires.' }} Your Discord role is being added.</p>
         <div class="row" style="margin-top:14px">
-          <a class="btn btn-primary btn-sm" routerLink="/dashboard/licence">Get my licence key</a>
+          <a class="btn btn-primary btn-sm" routerLink="/dashboard/licence">View my licence</a>
           <a class="btn btn-ghost btn-sm" routerLink="/dashboard">Back to overview</a>
         </div>
       </div>

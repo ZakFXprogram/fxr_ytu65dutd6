@@ -34,7 +34,7 @@ import { RevealDirective, SpotDirective } from '../../core/motion';
             </div>
             <div class="row">
               @if (!l.lifetime) { <a class="btn btn-primary btn-sm" routerLink="/pricing">{{ l.status === 'active' ? 'Extend' : 'Renew' }}</a> }
-              <a class="btn btn-ghost btn-sm" routerLink="/dashboard/licence">Licence key</a>
+              <a class="btn btn-ghost btn-sm" routerLink="/dashboard/licence">My licence</a>
             </div>
           </div>
         } @else {
@@ -53,14 +53,14 @@ import { RevealDirective, SpotDirective } from '../../core/motion';
 
       <div class="tiles" style="margin-top:14px">
         <div class="card tile" fxrSpot fxrReveal>
-          <div class="k">Licence key</div>
-          <div class="v">{{ store.licence()?.keySetAt ? 'Generated' : 'Not yet' }}</div>
-          <a class="small" routerLink="/dashboard/licence">{{ store.licence()?.keySetAt ? 'Replace it' : 'Get it' }} →</a>
+          <div class="k">Plan</div>
+          <div class="v">{{ store.licence()?.lifetime ? 'Lifetime' : (store.licence()?.planLabel || '—') }}</div>
+          <a class="small" routerLink="/dashboard/licence">Details →</a>
         </div>
         <div class="card tile" fxrSpot fxrReveal="80">
-          <div class="k">Computer</div>
-          <div class="v">{{ store.licence()?.activated ? 'Activated' : 'Not activated' }}</div>
-          <span class="small faint">One computer at a time</span>
+          <div class="k">Studies</div>
+          <div class="v">FXR Loader</div>
+          <a class="small" routerLink="/dashboard/licence">How to install →</a>
         </div>
         <div class="card tile" fxrSpot fxrReveal="160">
           <div class="k">Discord role</div>

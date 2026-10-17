@@ -15,7 +15,7 @@ export interface Me {
 }
 
 export interface MyLicence {
-  id: string; plan: string; planLabel: string; status: string; lifetime: boolean; expiresAt: number;
+  id: string; plan: string; kind: string; planLabel: string; status: string; lifetime: boolean; expiresAt: number;
   activated: boolean; keySetAt: number; canMove: boolean; nextMoveAt: number;
 }
 export type OrderStatus = 'pending' | 'confirming' | 'paid' | 'partially_paid' | 'review' | 'failed' | 'expired' | 'cancelled' | 'refunded';
