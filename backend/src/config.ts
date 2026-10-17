@@ -38,7 +38,21 @@ export interface TronConfig {
 export interface DiscordBotConfig {
   token: string;
   guildId: string;
-  roleId: string; // role given to members with an active licence
+  roleId: string; // role given to members with an active (premium) licence
+  /** Role given to members with an active "affilie" licence (partners). Empty = feature off. */
+  affiliateRoleId: string;
+  /** Application id of the bot app (for slash-command registration and interactions). */
+  appId: string;
+  /** Ed25519 public key of the app, to verify incoming interaction requests. Empty = endpoint closed. */
+  publicKey: string;
+  /** Channel the Loader jar is published to (#téléchargements). */
+  downloadsChannelId: string;
+  /** Roles whose holders may use the staff slash commands, besides the panel admins. */
+  staffRoleIds: string[];
+  /** Optional channel for short bot activity notes (licence changes, jar releases). Empty = off. */
+  logChannelId: string;
+  /** Send members a private reminder this many days before their licence ends (0 = off). */
+  reminderDays: number;
 }
 
 export interface AppConfig {
@@ -128,6 +142,18 @@ export function loadConfig(): AppConfig {
       token: env('DISCORD_BOT_TOKEN'),
       guildId: env('DISCORD_GUILD_ID'),
       roleId: env('DISCORD_MEMBER_ROLE_ID'),
+      affiliateRoleId: env('DISCORD_AFFILIATE_ROLE_ID'),
+      // the FXR bot app (owner of DISCORD_BOT_TOKEN), never the website's sign-in app
+      appId: env('DISCORD_APP_ID'),
+      publicKey: env('DISCORD_PUBLIC_KEY').toLowerCase(),
+      downloadsChannelId: env('DISCORD_DOWNLOADS_CHANNEL'),
+      staffRoleIds: env('DISCORD_STAFF_ROLE_IDS')
+        .split(/[,\s]+/)
+        .map((s) => s.trim())
+        .filter(Boolean),
+      logChannelId: env('DISCORD_LOG_CHANNEL'),
+      // reminders stay off until the owner turns them on at cutover
+      reminderDays: Math.min(Math.max(envInt('DISCORD_REMINDER_DAYS', 0), 0), 14),
     },
     discordInvite: env('DISCORD_INVITE'),
     supportEmail: env('SUPPORT_EMAIL'),
@@ -148,6 +174,10 @@ export function loadConfig(): AppConfig {
   // The ids can be set before the bot token: role sync starts once all three are present.
   if (b.guildId && !/^\d{17,20}$/.test(b.guildId)) problems.push('DISCORD_GUILD_ID (a number)');
   if (b.roleId && !/^\d{17,20}$/.test(b.roleId)) problems.push('DISCORD_MEMBER_ROLE_ID (a number)');
+  if (b.affiliateRoleId && !/^\d{17,20}$/.test(b.affiliateRoleId)) problems.push('DISCORD_AFFILIATE_ROLE_ID (a number)');
+  if (b.downloadsChannelId && !/^\d{17,20}$/.test(b.downloadsChannelId)) problems.push('DISCORD_DOWNLOADS_CHANNEL (a number)');
+  for (const id of b.staffRoleIds) if (!/^\d{17,20}$/.test(id)) problems.push(`DISCORD_STAFF_ROLE_IDS (bad id "${id}")`);
+  if (b.publicKey && !/^[0-9a-f]{64}$/.test(b.publicKey)) problems.push('DISCORD_PUBLIC_KEY (64 hex chars)');
   if (b.token && !(b.guildId && b.roleId)) problems.push('DISCORD_GUILD_ID / DISCORD_MEMBER_ROLE_ID (required with DISCORD_BOT_TOKEN)');
   if (production) {
     if (cfg.appSecret.length < 32) problems.push('APP_SECRET (32+ chars)');

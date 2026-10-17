@@ -3,6 +3,7 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
+import { raw as rawBodyParser } from 'express';
 import type { Request, Response, NextFunction } from 'express';
 import { AppModule } from './app.module';
 import { loadConfig } from './config';
@@ -17,10 +18,14 @@ async function bootstrap(): Promise<void> {
   const log = new Logger('FXR');
   const app = await NestFactory.create<NestExpressApplication>(AppModule, {
     logger: ['log', 'warn', 'error'],
+    rawBody: true, // Discord interaction requests are verified against the exact bytes received
   });
 
   app.set('trust proxy', 1); // Railway's edge proxy: req.ip is the real client (rate limits)
   app.disable('x-powered-by');
+  // Discord interaction requests are verified against the exact bytes received, so keep this one route raw
+  // (before the JSON parser, which would otherwise consume the body).
+  app.use('/api/discord/interactions', rawBodyParser({ type: () => true, limit: '64kb' }));
   app.useBodyParser('json', { limit: '16kb' });
   app.useBodyParser('urlencoded', { limit: '4kb', extended: false });
   // body-parser errors (too large, broken JSON) get a clean answer instead of falling through
@@ -69,6 +74,8 @@ async function bootstrap(): Promise<void> {
     res.set('Cache-Control', 'no-store');
     if (req.method === 'GET' || req.method === 'HEAD' || req.method === 'OPTIONS') return next();
     if (req.path.startsWith('/api/loader/')) return next();
+    // Discord posts interactions server-to-server (no cookies); they are authenticated by Ed25519 signature.
+    if (req.path === '/api/discord/interactions') return next();
     const origin = req.get('origin');
     if (origin === cfg.origin) return next();
     if (!origin && req.get('sec-fetch-site') === 'same-origin') return next();

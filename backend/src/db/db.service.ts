@@ -133,8 +133,12 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
     this.addColumn('licences', 'machine_moved_ms', 'INTEGER');
     this.addColumn('events', 'user_id', 'TEXT');
     this.addColumn('sessions', 'device', 'TEXT');
-    this.addColumn('users', 'role_state', 'INTEGER NOT NULL DEFAULT 0'); // 1 = we gave the Discord role
+    this.addColumn('users', 'role_state', 'INTEGER NOT NULL DEFAULT 0'); // 1 = we gave a Discord role (any FXR role)
     this.addColumn('users', 'in_guild', 'INTEGER'); // null unknown, 0 not in server, 1 in server
+    this.addColumn('users', 'granted_roles', 'TEXT'); // comma-separated FXR role ids we currently grant this member
+    this.addColumn('licences', 'kind', "TEXT NOT NULL DEFAULT 'premium'"); // premium | affilie (drives which Discord role)
+    this.addColumn('codes', 'kind', "TEXT NOT NULL DEFAULT 'premium'"); // kind of licence a redeem key grants
+    this.addColumn('licences', 'reminded_ms', 'INTEGER'); // last expiry reminder sent (idempotent DM)
     this.addColumn('orders', 'invoice_id', 'TEXT');
     this.addColumn('orders', 'invoice_url', 'TEXT');
     this.addColumn('orders', 'payment_id', 'TEXT');

@@ -20,6 +20,12 @@ import { RoleSyncService } from './roles/role-sync.service';
 import { CodesService } from './codes/codes.service';
 import { AdminService } from './admin/admin.service';
 import { AdminController } from './admin/admin.controller';
+import { BotService } from './discord/bot.service';
+import { InteractionsService } from './discord/interactions.service';
+import { InteractionsController } from './discord/interactions.controller';
+import { BotAdminController } from './discord/bot-admin.controller';
+import { ContentService } from './discord/content.service';
+import { RemindersService } from './discord/reminders.service';
 
 @Module({
   imports: [
@@ -38,6 +44,8 @@ import { AdminController } from './admin/admin.controller';
     PaymentsController,
     LoaderController,
     AdminController,
+    InteractionsController,
+    BotAdminController,
   ],
   providers: [
     { provide: CONFIG, useFactory: loadConfig },
@@ -48,6 +56,10 @@ import { AdminController } from './admin/admin.controller';
     RoleSyncService,
     CodesService,
     AdminService,
+    BotService,
+    InteractionsService,
+    ContentService,
+    RemindersService,
     AuthService,
     DiscordClient,
     UserGuard,

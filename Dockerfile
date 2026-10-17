@@ -25,6 +25,8 @@ WORKDIR /app
 COPY --from=backend /be/dist ./dist
 COPY --from=backend /be/node_modules ./node_modules
 COPY --from=backend /be/package.json ./package.json
+# the base Loader jar, patched with this server's config and published to Discord on demand
+COPY --from=backend /be/assets ./assets
 # the Angular build is served from /app/public (see app.module frontendDir)
 COPY --from=frontend /fe/dist/frontend/browser ./public
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh

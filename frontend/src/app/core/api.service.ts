@@ -76,6 +76,29 @@ export class ApiService {
   }
   disableCodes(ids: string[]): Observable<Done> { return this.http.post<Done>(this.p('codes/disable'), { ids }); }
   events(q: ListQuery): Observable<Page<AdminEvent>> { return this.http.get<Page<AdminEvent>>(this.p('events'), { params: this.params(q) }); }
+
+  // ----- Discord bot (manager migration)
+  botStatus(): Observable<BotStatus> { return this.http.get<BotStatus>(this.p('bot/status')); }
+  registerCommands(): Observable<{ ok: boolean; count?: number; error?: string }> { return this.http.post<{ ok: boolean; count?: number; error?: string }>(this.p('bot/register-commands'), {}); }
+  botPosts(): Observable<BotPost[]> { return this.http.get<BotPost[]>(this.p('bot/posts')); }
+  publishPost(postId: string, channelId: string): Observable<{ ok: boolean; messageId: string; edited: boolean }> { return this.http.post<{ ok: boolean; messageId: string; edited: boolean }>(this.p('bot/publish-post'), { postId, channelId }); }
+  publishJar(channelId?: string): Observable<{ ok: boolean; messageId: string; version: string }> { return this.http.post<{ ok: boolean; messageId: string; version: string }>(this.p('bot/publish-jar'), { channelId }); }
+  runReminders(): Observable<{ ok: boolean; sent?: number; failed?: number; error?: string }> { return this.http.post<{ ok: boolean; sent?: number; failed?: number; error?: string }>(this.p('bot/run-reminders'), {}); }
+}
+
+export interface BotStatus {
+  botConfigured: boolean;
+  appId: boolean;
+  publicKey: boolean;
+  memberRole: boolean;
+  affiliateRole: boolean;
+  downloadsChannel: boolean;
+  interactionsUrl: string;
+}
+export interface BotPost {
+  id: string;
+  title: string;
+  posted: { channelId: string; messageId: string; at: number } | null;
 }
 
 /** Human-readable message from an API error. */

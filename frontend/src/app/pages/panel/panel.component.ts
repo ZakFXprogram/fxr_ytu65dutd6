@@ -10,9 +10,10 @@ import { PanelMembersComponent } from './panel-members.component';
 import { PanelLicencesComponent } from './panel-licences.component';
 import { PanelKeysComponent } from './panel-keys.component';
 import { PanelActivityComponent } from './panel-activity.component';
+import { PanelDiscordComponent } from './panel-discord.component';
 import { MemberDrawerComponent } from './member-drawer.component';
 
-type View = 'overview' | 'orders' | 'payments' | 'members' | 'licences' | 'keys' | 'activity';
+type View = 'overview' | 'orders' | 'payments' | 'members' | 'licences' | 'keys' | 'discord' | 'activity';
 const VIEWS: { id: View; label: string; icon: string; title: string; sub: string }[] = [
   { id: 'overview', label: 'Overview', icon: 'chart', title: 'Overview', sub: 'Revenue, licences and what needs you.' },
   { id: 'orders', label: 'Orders', icon: 'receipt', title: 'Orders', sub: 'Every checkout, searchable. Paid orders confirm themselves.' },
@@ -20,6 +21,7 @@ const VIEWS: { id: View; label: string; icon: string; title: string; sub: string
   { id: 'members', label: 'Members', icon: 'users', title: 'Members', sub: 'Everyone who signed in with Discord.' },
   { id: 'licences', label: 'Licences', icon: 'key', title: 'Licences', sub: 'Extend or revoke many at once.' },
   { id: 'keys', label: 'Redeem keys', icon: 'ticket', title: 'Redeem keys', sub: 'Activation keys for giveaways and partners.' },
+  { id: 'discord', label: 'Discord', icon: 'chat', title: 'Discord', sub: 'Commandes, messages, publication du jar et rappels — le remplaçant de FXR Manager.' },
   { id: 'activity', label: 'Activity log', icon: 'activity', title: 'Activity log', sub: 'Everything that happened, newest first.' },
 ];
 
@@ -29,7 +31,7 @@ const VIEWS: { id: View; label: string; icon: string; title: string; sub: string
  */
 @Component({
   selector: 'app-panel',
-  imports: [RouterLink, IconComponent, PanelOverviewComponent, PanelOrdersComponent, PanelPaymentsComponent, PanelMembersComponent, PanelLicencesComponent, PanelKeysComponent, PanelActivityComponent, MemberDrawerComponent],
+  imports: [RouterLink, IconComponent, PanelOverviewComponent, PanelOrdersComponent, PanelPaymentsComponent, PanelMembersComponent, PanelLicencesComponent, PanelKeysComponent, PanelDiscordComponent, PanelActivityComponent, MemberDrawerComponent],
   template: `
     @if (mode() === 'hidden') {
       <section class="wrap section center" style="padding:90px 16px">
@@ -69,6 +71,7 @@ const VIEWS: { id: View; label: string; icon: string; title: string; sub: string
             @case ('members') { <app-panel-members (member)="memberId.set($event)" /> }
             @case ('licences') { <app-panel-licences (member)="memberId.set($event)" /> }
             @case ('keys') { <app-panel-keys /> }
+            @case ('discord') { <app-panel-discord /> }
             @case ('activity') { <app-panel-activity (member)="memberId.set($event)" /> }
           }
         </section>

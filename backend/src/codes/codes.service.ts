@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { randomInt } from 'node:crypto';
 import { DbService, newId } from '../db/db.service';
-import { LicencesService } from '../licences/licences.service';
+import { LicencesService, planIdForDays, durationLabel, type LicenceKind } from '../licences/licences.service';
 import { RoleSyncService } from '../roles/role-sync.service';
 import { sha256 } from '../common/util';
 
@@ -10,6 +10,7 @@ export interface CodeRow {
   code_hash: string;
   hint: string;
   plan: string;
+  kind: string; // premium | affilie
   days: number;
   status: string; // unused | used | disabled
   batch: string | null;
@@ -44,22 +45,30 @@ export class CodesService {
     return raw.trim().toUpperCase().replace(/\s+/g, '');
   }
 
-  generate(planId: string, count: number, batch: string, by: string, daysOverride?: number): string[] {
+  generate(planId: string, count: number, batch: string, by: string, daysOverride?: number, kind: LicenceKind = 'premium'): string[] {
     const plan = this.licences.plan(planId);
     if (!plan) throw new NotFoundException('Unknown plan');
-    const days = daysOverride ?? plan.days;
+    return this.create(planId, daysOverride ?? plan.days, count, batch, by, kind, plan.label);
+  }
+
+  /** Generate keys by duration (staff, from Discord): no bought plan, just a number of days and a kind. */
+  generateByDays(days: number, count: number, batch: string, by: string, kind: LicenceKind = 'premium'): string[] {
+    return this.create(planIdForDays(this.licences.plansList(), days), days, count, batch, by, kind, durationLabel(days));
+  }
+
+  private create(planId: string, days: number, count: number, batch: string, by: string, kind: LicenceKind, label: string): string[] {
     const out: string[] = [];
     this.db.tx(() => {
       for (let i = 0; i < count; i++) {
         const code = CodesService.newCode();
         this.db.run(
-          `INSERT INTO codes(id, code_hash, hint, plan, days, status, batch, created_by, created_ms) VALUES (?,?,?,?,?,'unused',?,?,?)`,
-          newId(), sha256(code), code.slice(-4), planId, days, batch || null, by, Date.now(),
+          `INSERT INTO codes(id, code_hash, hint, plan, kind, days, status, batch, created_by, created_ms) VALUES (?,?,?,?,?,?,'unused',?,?,?)`,
+          newId(), sha256(code), code.slice(-4), planId, kind, days, batch || null, by, Date.now(),
         );
         out.push(code);
       }
     });
-    this.db.logEvent('codes', `${count} redeem key(s) generated (${plan.label}${batch ? ', batch ' + batch : ''}) by ${by}`);
+    this.db.logEvent('codes', `${count} redeem key(s) generated (${label}, ${kind}${batch ? ', batch ' + batch : ''}) by ${by}`);
     return out;
   }
 
@@ -71,7 +80,7 @@ export class CodesService {
       if (!c || c.status !== 'unused') return null;
       const n = this.db.run(`UPDATE codes SET status = 'used', used_by = ?, used_ms = ? WHERE id = ? AND status = 'unused'`, userId, Date.now(), c.id);
       if (!n) return null;
-      const lic = this.licences.grant(userId, c.plan, `key ${c.hint}`, '', c.days);
+      const lic = this.licences.grantManual(userId, c.days, (c.kind as LicenceKind) || 'premium', `key ${c.hint}`);
       this.db.run('UPDATE codes SET licence_id = ? WHERE id = ?', lic.id, c.id);
       this.db.logEvent('redeem', `Redeem key …${c.hint} activated (${c.days ? '+' + c.days + ' days' : 'lifetime'})`, userId);
       return { plan: c.plan, days: c.days, expiresAt: this.licences.byId(lic.id)!.end_ms };

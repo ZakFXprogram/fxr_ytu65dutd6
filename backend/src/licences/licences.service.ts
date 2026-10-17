@@ -8,6 +8,7 @@ export interface LicenceRow {
   id: string;
   user_ref: string; // Discord user id of the owner
   plan: string;
+  kind: string; // premium | affilie (drives which Discord role is granted)
   key_hash: string;
   status: string;
   source: string;
@@ -25,6 +26,9 @@ export interface LicenceRow {
 export const LIC_ACTIVE = 'active';
 export const LIC_EXPIRED = 'expired';
 export const LIC_REVOKED = 'revoked';
+
+export type LicenceKind = 'premium' | 'affilie';
+export const LICENCE_KINDS: LicenceKind[] = ['premium', 'affilie'];
 
 const KEY_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no 0/O/1/I
 const KEY_GROUPS = 4;
@@ -57,6 +61,10 @@ export class LicencesService {
 
   plan(planId: string): Plan | undefined {
     return this.cfg.plans.find((p) => p.id === planId);
+  }
+
+  plansList(): Plan[] {
+    return this.cfg.plans;
   }
 
   private machineHash(machineId: string): string {
@@ -104,6 +112,56 @@ export class LicencesService {
     );
     this.db.logEvent('issue', `Licence activated: ${this.plan(planId)?.label ?? planId} from ${sourceLabel(source)}`, userRef);
     return this.byId(id)!;
+  }
+
+  /**
+   * Staff grant from Discord/panel by duration rather than a bought plan. Extends the member's active licence
+   * (or creates one) for `days` (0 = lifetime) and sets its kind, which decides the Discord role.
+   */
+  grantManual(userRef: string, days: number, kind: LicenceKind, source: string): LicenceRow {
+    const now = Date.now();
+    this.db.run(
+      `INSERT OR IGNORE INTO users(id, username, display_name, avatar, banned, created_ms, last_login_ms) VALUES (?,?,NULL,NULL,0,?,0)`,
+      userRef, userRef, now,
+    );
+    const planId = planIdForDays(this.cfg.plans, days);
+    const current = this.db.get<LicenceRow>(
+      `SELECT * FROM licences WHERE user_ref = ? AND status = ? ORDER BY (end_ms = 0) DESC, end_ms DESC LIMIT 1`,
+      userRef, LIC_ACTIVE,
+    );
+    if (current) {
+      const end = current.end_ms === 0 || days === 0 ? 0 : Math.max(current.end_ms, now) + days * 86400_000;
+      this.db.run('UPDATE licences SET plan = ?, kind = ?, end_ms = ?, updated_ms = ? WHERE id = ?', planId, kind, end, now, current.id);
+      this.db.logEvent('renew', `Licence set to ${durationLabel(days)} (${kind}) from ${sourceLabel(source)}`, userRef);
+      return this.byId(current.id)!;
+    }
+    const id = newId();
+    const end = days > 0 ? now + days * 86400_000 : 0;
+    this.db.run(
+      `INSERT INTO licences(id,user_ref,plan,kind,key_hash,status,source,start_ms,end_ms,machine_id,order_id,last_seen_ms,created_ms,updated_ms,key_set_ms,machine_moved_ms)
+       VALUES (?,?,?,?,?,?,?,?,?,NULL,NULL,NULL,?,?,NULL,NULL)`,
+      id, userRef, planId, kind, sha256(LicencesService.newKey() + newId()), LIC_ACTIVE, source, now, end, now, now,
+    );
+    this.db.logEvent('issue', `Licence ${durationLabel(days)} (${kind}) from ${sourceLabel(source)}`, userRef);
+    return this.byId(id)!;
+  }
+
+  /** The distinct kinds of this member's currently-active licences (for role mapping). */
+  activeKinds(userRef: string): string[] {
+    const rows = this.db.all<{ kind: string }>(
+      `SELECT DISTINCT COALESCE(kind,'premium') AS kind FROM licences WHERE user_ref = ? AND status = ? AND (end_ms = 0 OR end_ms > ?)`,
+      userRef, LIC_ACTIVE, Date.now(),
+    );
+    return rows.map((r) => r.kind || 'premium');
+  }
+
+  /** Active, non-lifetime licences ending within `days` days (for expiry reminders). */
+  endingWithin(days: number): LicenceRow[] {
+    const now = Date.now();
+    return this.db.all<LicenceRow>(
+      `SELECT * FROM licences WHERE status = ? AND end_ms > ? AND end_ms <= ?`,
+      LIC_ACTIVE, now, now + days * 86400_000,
+    );
   }
 
   byId(id: string): LicenceRow | undefined {
@@ -208,6 +266,7 @@ export class LicencesService {
     return {
       id: l.id,
       plan: l.plan,
+      kind: l.kind || 'premium',
       planLabel: this.plan(l.plan)?.label ?? l.plan,
       status: this.effectiveStatus(l),
       lifetime: l.end_ms === 0,
@@ -240,5 +299,43 @@ function sourceLabel(source: string): string {
   if (source === 'redeem') return 'a redeem key';
   if (source === 'webhook') return 'a payment';
   if (source.startsWith('panel')) return 'the owner';
+  if (source.startsWith('discord')) return 'Discord (staff)';
   return source;
+}
+
+/** The plan id whose duration matches `days`, else a 'custom' marker (keeps the stored plan meaningful). */
+export function planIdForDays(plans: Plan[], days: number): string {
+  const p = plans.find((x) => x.days === days);
+  return p ? p.id : days === 0 ? 'lifetime' : 'custom';
+}
+
+/** A short human label for a duration in days (0 = lifetime). */
+export function durationLabel(days: number): string {
+  if (days === 0) return 'à vie';
+  if (days % 365 === 0) return `${days / 365} an${days / 365 > 1 ? 's' : ''}`;
+  if (days % 30 === 0) return `${days / 30} mois`;
+  if (days % 7 === 0) return `${days / 7} semaine${days / 7 > 1 ? 's' : ''}`;
+  return `${days} jours`;
+}
+
+/** Parses a staff duration like "7j", "30j", "3m", "1a", "vie", "lifetime" into days (0 = lifetime, -1 = bad). */
+export function parseDuration(raw: string): number {
+  const s = raw.trim().toLowerCase().replace(/\s+/g, '');
+  if (s === 'vie' || s === 'lifetime' || s === 'infini' || s === '∞') return 0;
+  const m = s.match(/^(\d{1,4})(j|d|s|w|m|a|y)?$/);
+  if (!m) return -1;
+  const n = parseInt(m[1], 10);
+  if (!Number.isFinite(n) || n <= 0) return -1;
+  switch (m[2]) {
+    case 'a':
+    case 'y':
+      return n * 365;
+    case 'm':
+      return n * 30;
+    case 's':
+    case 'w':
+      return n * 7;
+    default:
+      return n; // j / d / none = days
+  }
 }
