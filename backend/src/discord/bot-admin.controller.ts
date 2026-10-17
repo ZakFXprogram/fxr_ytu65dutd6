@@ -59,9 +59,30 @@ export class BotAdminController {
     if (!this.bot.configured || !this.cfg.bot.appId) {
       return { ok: false, error: 'DISCORD_BOT_TOKEN / DISCORD_APP_ID manquant' };
     }
-    await this.bot.registerGuildCommands(commandDefinitions());
+    await this.discord(() => this.bot.registerGuildCommands(commandDefinitions()));
     this.db.logEvent('bot', `Slash commands (ré)enregistrées par ${a.user.id}`);
     return { ok: true, count: commandDefinitions().length };
+  }
+
+  /** Turns a Discord REST failure into a clear, actionable message for the panel. */
+  private async discord<T>(fn: () => Promise<T>): Promise<T> {
+    try {
+      return await fn();
+    } catch (e) {
+      const status = (e as { status?: number }).status;
+      if (status === 401) {
+        throw new BadRequestException(
+          "Discord a refusé le token (401). Vérifie DISCORD_BOT_TOKEN : le token du bot de l'app FXR (onglet Bot), sans « Bot » ni espace.",
+        );
+      }
+      if (status === 403) {
+        throw new BadRequestException(
+          'Discord : accès refusé (403). Le bot doit être sur le serveur, son rôle au-dessus des rôles gérés, avec Gérer les rôles / Envoyer des messages.',
+        );
+      }
+      if (status === 404) throw new BadRequestException('Discord : introuvable (404). Vérifie le salon / le serveur.');
+      throw new BadRequestException('Discord a renvoyé une erreur : ' + ((e as Error).message || 'inconnue'));
+    }
   }
 
   /** The guides available to publish, with where each one is currently posted. */
@@ -76,7 +97,7 @@ export class BotAdminController {
     if (!this.bot.configured) throw new BadRequestException('Bot non configuré');
     const channelId = dto.channelId || '';
     if (!SNOWFLAKE.test(channelId)) throw new BadRequestException('Donne le salon où publier');
-    const r = await this.content.publishPost(dto.postId, channelId);
+    const r = await this.discord(() => this.content.publishPost(dto.postId, channelId));
     return { ok: true, ...r, by: a.user.id };
   }
 
@@ -86,7 +107,7 @@ export class BotAdminController {
     if (!this.bot.configured) throw new BadRequestException('Bot non configuré');
     const channelId = dto.channelId || this.cfg.bot.downloadsChannelId;
     if (!SNOWFLAKE.test(channelId)) throw new BadRequestException('Aucun salon #téléchargements configuré');
-    const r = await this.content.publishJar(channelId);
+    const r = await this.discord(() => this.content.publishJar(channelId));
     return { ok: true, ...r, by: a.user.id };
   }
 
