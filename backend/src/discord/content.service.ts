@@ -75,10 +75,12 @@ export class ContentService {
     const roles = [b.roleId, b.affiliateRoleId].filter(Boolean).join(',');
     const users = [...this.cfg.adminIds].join(',');
     return (
-      `# FXR Fluxora - acces aux studies par role Discord (genere par le site)\n` +
+      `# FXR Fluxora - acces aux studies (genere par le site)\n` +
+      `site_url=${this.cfg.publicUrl}\n` +
+      `guild_name=${(this.cfg.company || 'FXR Fluxora').replace(/[\n=:#!]/g, ' ')}\n` +
+      // kept for older (Discord-direct) jars; the current Loader signs in through site_url
       `client_id=${b.appId}\n` +
       `guild_id=${b.guildId}\n` +
-      `guild_name=${(this.cfg.company || 'FXR Fluxora').replace(/[\n=:#!]/g, ' ')}\n` +
       `role_ids=${roles}\n` +
       `user_ids=${users}\n` +
       `ports=53134,53135,53136\n`

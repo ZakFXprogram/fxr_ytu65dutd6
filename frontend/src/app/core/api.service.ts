@@ -31,6 +31,7 @@ export class ApiService {
     return this.http.post<{ plan: string; days: number; expiresAt: number }>('/api/account/redeem', { code });
   }
   syncRole(): Observable<{ result: string }> { return this.http.post<{ result: string }>('/api/account/discord/sync', {}); }
+  loaderLink(req: string): Observable<{ allowed: boolean }> { return this.http.post<{ allowed: boolean }>('/api/account/loader-link', { req }); }
   sessions(): Observable<Session[]> { return this.http.get<Session[]>('/api/account/sessions'); }
   revokeSession(id: string): Observable<Ok> { return this.http.post<Ok>('/api/account/sessions/revoke', { id }); }
   revokeOtherSessions(): Observable<{ ok: boolean; ended: number }> { return this.http.post<{ ok: boolean; ended: number }>('/api/account/sessions/revoke-others', {}); }

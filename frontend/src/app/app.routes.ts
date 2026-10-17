@@ -15,6 +15,7 @@ export const routes: Routes = [
   { path: 'studies/:slug', loadComponent: () => import('./pages/study.component').then((m) => m.StudyComponent), title: T('Study') },
   { path: 'pricing', loadComponent: () => import('./pages/pricing.component').then((m) => m.PricingComponent), title: T('Pricing') },
   { path: 'install', loadComponent: () => import('./pages/install.component').then((m) => m.InstallComponent), title: T('Install') },
+  { path: 'loader', loadComponent: () => import('./pages/loader-link.component').then((m) => m.LoaderLinkComponent), title: T('Loader') },
   { path: 'faq', loadComponent: () => import('./pages/faq.component').then((m) => m.FaqComponent), title: T('FAQ') },
   { path: 'legal/:doc', loadComponent: () => import('./pages/legal.component').then((m) => m.LegalComponent), title: T('Legal') },
   { path: 'buy/:plan', loadComponent: () => import('./pages/buy.component').then((m) => m.BuyComponent), title: T('Checkout') },

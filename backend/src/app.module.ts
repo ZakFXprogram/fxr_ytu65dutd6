@@ -26,6 +26,7 @@ import { InteractionsController } from './discord/interactions.controller';
 import { BotAdminController } from './discord/bot-admin.controller';
 import { ContentService } from './discord/content.service';
 import { RemindersService } from './discord/reminders.service';
+import { LoaderSessionService } from './loader/loader-session.service';
 
 @Module({
   imports: [
@@ -60,6 +61,7 @@ import { RemindersService } from './discord/reminders.service';
     InteractionsService,
     ContentService,
     RemindersService,
+    LoaderSessionService,
     AuthService,
     DiscordClient,
     UserGuard,

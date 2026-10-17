@@ -7,12 +7,16 @@ import { LicencesService } from '../licences/licences.service';
 import { OrdersService } from '../orders/orders.service';
 import { CodesService } from '../codes/codes.service';
 import { RoleSyncService } from '../roles/role-sync.service';
+import { LoaderSessionService } from '../loader/loader-session.service';
 import { DbService, type EventRow } from '../db/db.service';
 import { CONFIG, type AppConfig } from '../config';
 import { assertId } from '../common/util';
 
 class RedeemDto {
   @IsString() @Length(8, 40) code!: string;
+}
+class LoaderLinkDto {
+  @IsString() @Matches(/^[a-f0-9]{24,64}$/i) req!: string;
 }
 class SessionIdDto {
   @IsString() @Matches(/^[0-9a-f]{16}$/) id!: string;
@@ -28,9 +32,18 @@ export class AccountController {
     private readonly orders: OrdersService,
     private readonly codes: CodesService,
     private readonly roles: RoleSyncService,
+    private readonly loaderSessions: LoaderSessionService,
     private readonly db: DbService,
     @Inject(CONFIG) private readonly cfg: AppConfig,
   ) {}
+
+  /** The /loader page calls this after the member signs in, to link this sign-in to the waiting Loader. */
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Post('loader-link')
+  loaderLink(@CurrentAuth() a: AuthContext, @Body() dto: LoaderLinkDto) {
+    const name = a.user.display_name || a.user.username;
+    return this.loaderSessions.claim(dto.req, a.user.id, name);
+  }
 
   @Get()
   get(@CurrentAuth() a: AuthContext) {
