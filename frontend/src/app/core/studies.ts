@@ -54,9 +54,9 @@ export const STUDIES: StudyInfo[] = [
   },
   {
     slug: 'market-profile', name: 'Market Profile', tag: 'Profiles', img: 'market_profile',
-    blurb: 'Classic TPO letters with a bid/ask volume profile per session: POC, value area, TPOC, single prints, for RTH, Globex or your own hours.',
-    about: 'Market Profile builds, for every session, the letter profile traders have read for decades: one letter per time bracket, stacked at each price the market visited. A volume profile coloured by delta sits behind or beside the letters, with the value area, volume POC, TPOC and single prints marked. Choose the session (RTH, Globex, 24 hours or your own hours) and group days into weekly, monthly or N-day composites.',
-    points: ['Authentic TPO letters (A, B, C…) per time bracket', 'Volume profile coloured by delta, behind or beside the letters', 'Value area, POC, TPOC and single prints', 'RTH / Globex / 24 h / custom sessions, daily to monthly composites'],
+    blurb: 'Classic TPO letters with a grey volume profile and a blue/red delta profile per session: POC, value area, TPOC, single prints, for RTH, Globex or your own hours.',
+    about: 'Market Profile builds, for every session, the letter profile traders have read for decades: one letter per time bracket, stacked at each price the market visited. A grey volume profile with the delta profile drawn over it (blue for buyers, red for sellers) sits beside or behind the letters, with the value area, volume POC, TPOC and single prints marked. Choose the session (RTH, Globex, 24 hours or your own hours) and group days into weekly, monthly or N-day composites.',
+    points: ['Authentic TPO letters (A, B, C…) per time bracket', 'Grey volume profile with a blue / red delta profile', 'Value area, POC, TPOC and single prints', 'RTH / Globex / 24 h / custom sessions, daily to monthly composites'],
     data: 'Tick-by-tick data with bid/ask side.',
   },
   {

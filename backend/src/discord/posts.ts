@@ -22,8 +22,9 @@ const COL_PURPLE = 8080895;
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
-  '2.6.0':
-    `🆕 **Nouvelle étude : Market Profile** — lettres TPO (A, B, C…) + volume profile coloré par le delta, ` +
+  '2.6.1':
+    `🆕 **Nouvelle étude : Market Profile** — lettres TPO (A, B, C…), volume profile en gris avec le profil de delta ` +
+    `(bleu acheteurs / rouge vendeurs) par-dessus, ` +
     `value area, POC, TPOC et single prints. Session RTH / Globex / 24 h / horaires perso, profils journaliers, ` +
     `hebdo, mensuels ou composites. Menu **Study → FXR Studies → Market Profile**.`,
 };
@@ -144,14 +145,14 @@ export const POSTS: Post[] = [
   },
   {
     id: 'update_2_6_0',
-    title: '🆕 Mise à jour 2.6.0 — Market Profile',
+    title: '🆕 Mise à jour 2.6.1 — Market Profile',
     color: COL_PURPLE,
     footer: 'FXR Fluxora • Order Flow pour MotiveWave',
     description:
       "Une nouvelle étude rejoint la suite : **[FXR] Market Profile**, le profil TPO classique avec son volume profile, session par session.",
     fields: [
       { name: '🔤 Lettres TPO authentiques', value: 'Une lettre par tranche de temps (A, B, C…, 30 min par défaut), empilées à chaque prix visité.', inline: true },
-      { name: '📊 Volume profile', value: 'Coloré par le delta (acheteurs / vendeurs), **derrière** les lettres ou **à côté** (gauche / droite).', inline: true },
+      { name: '📊 Volume + delta', value: 'Volume en **gris**, profil de **delta** par-dessus (bleu acheteurs / rouge vendeurs), à gauche, à droite ou derrière les lettres.', inline: true },
       { name: '🎯 Niveaux', value: 'Value area (70 % réglable), POC volume, TPOC, single prints et stats V / Δ / range.', inline: true },
       { name: '🕘 Sessions', value: 'RTH, Globex (ETH), 24 h ou **tes propres horaires** (heure de New York).', inline: true },
       { name: '🗓️ Regroupement', value: 'Profils **journaliers**, **hebdo**, **mensuels** ou **composites N jours**.', inline: true },
