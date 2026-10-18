@@ -53,6 +53,13 @@ export const STUDIES: StudyInfo[] = [
     data: 'Tick-by-tick data with bid/ask side.',
   },
   {
+    slug: 'market-profile', name: 'Market Profile', tag: 'Profiles', img: 'market_profile',
+    blurb: 'Classic TPO letters with a bid/ask volume profile per session: POC, value area, TPOC, single prints, for RTH, Globex or your own hours.',
+    about: 'Market Profile builds, for every session, the letter profile traders have read for decades: one letter per time bracket, stacked at each price the market visited. A volume profile coloured by delta sits behind or beside the letters, with the value area, volume POC, TPOC and single prints marked. Choose the session (RTH, Globex, 24 hours or your own hours) and group days into weekly, monthly or N-day composites.',
+    points: ['Authentic TPO letters (A, B, C…) per time bracket', 'Volume profile coloured by delta, behind or beside the letters', 'Value area, POC, TPOC and single prints', 'RTH / Globex / 24 h / custom sessions, daily to monthly composites'],
+    data: 'Tick-by-tick data with bid/ask side.',
+  },
+  {
     slug: 'daily-market-info', name: 'Daily Market Info', tag: 'Levels', img: 'daily_market_info_full',
     blurb: 'Every session level that matters on one chart: opens, prior day/week/month, value areas, initial balance, VWAP bands and an economic calendar.',
     about: 'Daily Market Info puts the reference levels traders check every morning on one chart, session by session: opens, prior highs and lows, value areas, opening range and initial balance, VWAPs with bands, and the day\'s economic events filtered by impact.',

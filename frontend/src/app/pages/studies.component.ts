@@ -10,7 +10,7 @@ import { RevealDirective, SpotDirective } from '../core/motion';
   template: `
     <section class="wrap section-tight" style="padding-top:64px">
       <span class="chip rise">The FXR Bundle</span>
-      <h1 class="rise" style="--d:80ms;margin-top:16px">Seven studies, <span class="grad">one tape</span></h1>
+      <h1 class="rise" style="--d:80ms;margin-top:16px">Eight studies, <span class="grad">one tape</span></h1>
       <p class="lead rise" style="--d:160ms">Every study reads the same tick-by-tick data, so they agree with each other. Screenshots are rendered by MotiveWave on simulated data.</p>
       <div class="seg rise" style="--d:240ms;margin-top:10px">
         @for (t of tags; track t) {
@@ -35,7 +35,7 @@ import { RevealDirective, SpotDirective } from '../core/motion';
       </div>
 
       <div class="cta-band" fxrReveal style="margin-top:56px">
-        <h2>All seven are in the bundle</h2>
+        <h2>All eight are in the bundle</h2>
         <p>One licence unlocks every study, every update and every future study.</p>
         <a class="btn btn-primary" routerLink="/pricing">See the bundle <app-icon name="arrow" /></a>
       </div>

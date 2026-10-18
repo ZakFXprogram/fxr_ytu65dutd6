@@ -20,10 +20,20 @@ const COL_GREY = 6055536;
 const COL_AMBER = 14725184;
 const COL_PURPLE = 8080895;
 
+/** What changed in each jar version, shown in its release message (versions without notes show none). */
+export const RELEASE_NOTES: Record<string, string> = {
+  '2.6.0':
+    `🆕 **Nouvelle étude : Market Profile** — lettres TPO (A, B, C…) + volume profile coloré par le delta, ` +
+    `value area, POC, TPOC et single prints. Session RTH / Globex / 24 h / horaires perso, profils journaliers, ` +
+    `hebdo, mensuels ou composites. Menu **Study → FXR Studies → Market Profile**.`,
+};
+
 /** The jar-release message (the file itself is attached separately). */
 export function jarReleaseText(version: string): string {
+  const notes = RELEASE_NOTES[version];
   return (
     `📥 **FXR OrderFlow ${version}** pour MotiveWave\n\n` +
+    (notes ? `${notes}\n\n` : '') +
     `Le fichier **FXROrderFlow.jar** est en pièce jointe. Licence active requise (rôle **Premium** ou **Affilié**) — vérifie avec \`/ma-licence\`.\n` +
     `Installation : suis **#🛠️・installation** (Windows et macOS). MotiveWave **fermé** avant de remplacer le jar.`
   );
@@ -102,7 +112,7 @@ export const POSTS: Post[] = [
     footer: "Ta question n'est pas là ? Pose-la dans #🆘・support • FXR Fluxora",
     description: 'Les questions qui reviennent le plus souvent.',
     fields: [
-      { name: "C'est quoi FXR Fluxora ?", value: "Une suite d'études **order flow** pour MotiveWave : Big Trades, Delta Bars, Delta Heatmap, Absorption & Imbalances, Leg to Leg et Daily Market Info." },
+      { name: "C'est quoi FXR Fluxora ?", value: "Une suite d'études **order flow** pour MotiveWave : Big Trades, Deep Trades, Delta Bars, Delta Heatmap, Absorption & Imbalances, Leg to Leg, Market Profile et Daily Market Info." },
       { name: 'Sur quelle plateforme ?', value: '**MotiveWave** (version récente), sur **Windows** et **macOS**. Le même `FXROrderFlow.jar` sert pour les deux.' },
       { name: 'Quelles données de marché ?', value: 'Un flux **tick par tick** avec le côté agresseur (bid/ask), ex. Rithmic ou CQG sur les futures CME. Sans données tick, les études order flow restent vides.' },
       { name: 'Comment obtenir une licence ?', value: "Via le **site** (paiement), ou une **clé** donnée par le staff : tape `/activer` sur le serveur et colle-la. Le rôle arrive instantanément." },
@@ -130,6 +140,23 @@ export const POSTS: Post[] = [
       { name: '🗓️ Daily Market Info', value: 'OHLC, value area, OR / IB, VWAP, opens clés, gaps et calendrier des news.', inline: true },
       { name: '✅ Pour commencer', value: "1. Obtiens ta licence sur le **site**, ou active ta clé avec `/activer`\n2. Télécharge le jar dans **#📥・téléchargements**\n3. Suis **#🛠️・installation**\n4. Partage tes setups dans **#📊・setups**" },
       { name: '📌 À lire', value: '**#📜・règles** et **#❓・faq**. Bienvenue à tous, et bons trades ! 🎯' },
+    ],
+  },
+  {
+    id: 'update_2_6_0',
+    title: '🆕 Mise à jour 2.6.0 — Market Profile',
+    color: COL_PURPLE,
+    footer: 'FXR Fluxora • Order Flow pour MotiveWave',
+    description:
+      "Une nouvelle étude rejoint la suite : **[FXR] Market Profile**, le profil TPO classique avec son volume profile, session par session.",
+    fields: [
+      { name: '🔤 Lettres TPO authentiques', value: 'Une lettre par tranche de temps (A, B, C…, 30 min par défaut), empilées à chaque prix visité.', inline: true },
+      { name: '📊 Volume profile', value: 'Coloré par le delta (acheteurs / vendeurs), **derrière** les lettres ou **à côté** (gauche / droite).', inline: true },
+      { name: '🎯 Niveaux', value: 'Value area (70 % réglable), POC volume, TPOC, single prints et stats V / Δ / range.', inline: true },
+      { name: '🕘 Sessions', value: 'RTH, Globex (ETH), 24 h ou **tes propres horaires** (heure de New York).', inline: true },
+      { name: '🗓️ Regroupement', value: 'Profils **journaliers**, **hebdo**, **mensuels** ou **composites N jours**.', inline: true },
+      { name: '⚙️ Réglages', value: 'Taille des lettres, largeur du VP, couleurs, affichage de chaque élément on/off.', inline: true },
+      { name: '📥 Installer', value: "1. Télécharge le nouveau **FXROrderFlow.jar** dans **#📥・téléchargements**\n2. **Ferme MotiveWave**, remplace l'ancien jar\n3. Relance, lance le **Loader** → **Study → FXR Studies → Market Profile**" },
     ],
   },
 ];
