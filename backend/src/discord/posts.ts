@@ -26,7 +26,8 @@ export const RELEASE_NOTES: Record<string, string> = {
     `🆕 **Deux nouvelles études** : **Volume Profile** (composite / par jour, semaine, mois / zone visible ; RTH, session complète, ` +
     `overnight ou ETH + RTH ; styles Bars, Heatmap, Outline, Holo ; volume gris + delta bleu / rouge ; value area, POC jusqu'au retest, HVN / LVN) ` +
     `et **TPO Profile** (lettres par période façon Sierra, volume + delta attachés, value area, singles, poor / excess, IB + extensions, OR, totaux). ` +
-    `L'ancien **Market Profile** est retiré : remplace-le par **TPO Profile** sur tes graphiques.`,
+    `L'ancien **Market Profile** est retiré : remplace-le par **TPO Profile** sur tes graphiques.\n\n` +
+    `🔧 **Correctif** : les études ne captent plus les clics sur tout le graphique (ex. Daily Market Info ouvrait ses paramètres à chaque clic) ; seul ce qu'elles dessinent réagit à la souris.`,
   '2.7.0':
     `🆕 **Nouvelle étude : Volume Profile** — composite, par jour / semaine / mois ou zone visible ; RTH, session complète, ` +
     `overnight ou ETH + RTH séparés ; styles Bars, Heatmap, Outline, Holo… ; volume gris + delta bleu / rouge, bid / ask ou ` +
@@ -162,6 +163,7 @@ export const POSTS: Post[] = [
       { name: '📊 Volume Profile', value: '**Composite**, **Split** (jour / semaine / mois) ou **Visible Range**. RTH, session complète, overnight ou ETH + RTH. Styles Bars, Heatmap, Outline, **Holo**… Volume **gris + delta** bleu / rouge, bid / ask, ETH / RTH.' },
       { name: '🔤 TPO Profile', value: 'Lettres par période façon **Sierra** (ou blocs), volume + delta attachés, TPO POC / VP POC, value area, midpoint, **singles prolongés jusqu\'au remplissage**, **poor / excess** high et low, **IB + extensions**, opening range, bloc de totaux.' },
       { name: '🎯 Niveaux', value: 'Lignes projetées (prolongées jusqu\'au retest), étiquettes avec prix, tags sur le bord droit, valeurs exportées et signaux au contact des niveaux.' },
+      { name: '🔧 Correctif', value: 'Les études ne captent plus les clics sur tout le graphique : avant, Daily Market Info (et d\'autres) ouvrait ses paramètres dès qu\'on cliquait n\'importe où. Seul ce qu\'elles dessinent (tableau, profils) réagit à la souris.' },
       { name: '📥 Installer', value: "1. Télécharge le nouveau **FXROrderFlow.jar** dans **#📥・téléchargements**\n2. **Ferme MotiveWave**, remplace l'ancien jar\n3. Relance, lance le **Loader** → **Study → FXR Studies → Volume Profile / TPO Profile**\n4. Si tu avais le Market Profile sur un graphique, retire-le et ajoute **TPO Profile**" },
     ],
   },
