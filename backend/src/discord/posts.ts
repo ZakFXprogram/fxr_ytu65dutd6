@@ -22,6 +22,11 @@ const COL_PURPLE = 8080895;
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
+  '2.8.0':
+    `🆕 **Deux nouvelles études** : **Volume Profile** (composite / par jour, semaine, mois / zone visible ; RTH, session complète, ` +
+    `overnight ou ETH + RTH ; styles Bars, Heatmap, Outline, Holo ; volume gris + delta bleu / rouge ; value area, POC jusqu'au retest, HVN / LVN) ` +
+    `et **TPO Profile** (lettres par période façon Sierra, volume + delta attachés, value area, singles, poor / excess, IB + extensions, OR, totaux). ` +
+    `L'ancien **Market Profile** est retiré : remplace-le par **TPO Profile** sur tes graphiques.`,
   '2.7.0':
     `🆕 **Nouvelle étude : Volume Profile** — composite, par jour / semaine / mois ou zone visible ; RTH, session complète, ` +
     `overnight ou ETH + RTH séparés ; styles Bars, Heatmap, Outline, Holo… ; volume gris + delta bleu / rouge, bid / ask ou ` +
@@ -117,7 +122,7 @@ export const POSTS: Post[] = [
     footer: "Ta question n'est pas là ? Pose-la dans #🆘・support • FXR Fluxora",
     description: 'Les questions qui reviennent le plus souvent.',
     fields: [
-      { name: "C'est quoi FXR Fluxora ?", value: "Une suite d'études **order flow** pour MotiveWave : Big Trades, Deep Trades, Delta Bars, Delta Heatmap, Absorption & Imbalances, Leg to Leg, Market Profile, Volume Profile et Daily Market Info." },
+      { name: "C'est quoi FXR Fluxora ?", value: "Une suite d'études **order flow** pour MotiveWave : Big Trades, Deep Trades, Delta Bars, Delta Heatmap, Absorption & Imbalances, Leg to Leg, Volume Profile, TPO Profile et Daily Market Info." },
       { name: 'Sur quelle plateforme ?', value: '**MotiveWave** (version récente), sur **Windows** et **macOS**. Le même `FXROrderFlow.jar` sert pour les deux.' },
       { name: 'Quelles données de marché ?', value: 'Un flux **tick par tick** avec le côté agresseur (bid/ask), ex. Rithmic ou CQG sur les futures CME. Sans données tick, les études order flow restent vides.' },
       { name: 'Comment obtenir une licence ?', value: "Via le **site** (paiement), ou une **clé** donnée par le staff : tape `/activer` sur le serveur et colle-la. Le rôle arrive instantanément." },
@@ -148,36 +153,16 @@ export const POSTS: Post[] = [
     ],
   },
   {
-    id: 'update_2_7_0',
-    title: '🆕 Mise à jour 2.7.0 — Volume Profile',
+    id: 'update_2_8_0',
+    title: '🆕 Mise à jour 2.8.0 — Volume Profile + TPO Profile',
     color: COL_PURPLE,
     footer: 'FXR Fluxora • Order Flow pour MotiveWave',
-    description: "Nouvelle étude : **[FXR] Volume Profile**, construite sur chaque tick avec le côté acheteur / vendeur.",
+    description: "Deux nouvelles études construites sur chaque tick avec le côté acheteur / vendeur. L'ancien **Market Profile** est retiré et remplacé par **TPO Profile**.",
     fields: [
-      { name: '🧩 Modes', value: '**Composite** (N jours / semaines / mois), **Split** (un profil par jour, semaine ou mois) ou **Visible Range** (ce qui est à l\'écran).', inline: true },
-      { name: '🕘 Sessions', value: 'RTH, session complète, overnight ou **ETH + RTH séparés**, avec presets (indices US, énergie, métaux, taux, grains, Eurex) ou horaires perso.', inline: true },
-      { name: '🎨 Styles', value: 'Bars, Heatmap, Outline, Outline + Fill, **Holo**, combinaisons… Forme en escalier ou lissée.', inline: true },
-      { name: '🌈 Couleurs', value: 'Volume **gris + delta** bleu / rouge, bid / ask, ETH / RTH, dégradé ou couleur unie.', inline: true },
-      { name: '🎯 Niveaux', value: 'Value area, **POC prolongé jusqu\'au retest** (naked POC), HVN / LVN, marqueurs open / close, légende.', inline: true },
-      { name: '📤 Export', value: 'POC / VAH / VAL exportés pour d\'autres études et alertes, signaux au contact des niveaux.', inline: true },
-      { name: '📥 Installer', value: "1. Télécharge le nouveau **FXROrderFlow.jar** dans **#📥・téléchargements**\n2. **Ferme MotiveWave**, remplace l'ancien jar\n3. Relance, lance le **Loader** → **Study → FXR Studies → Volume Profile**" },
-    ],
-  },
-  {
-    id: 'update_2_6_0',
-    title: '🆕 Mise à jour 2.6.1 — Market Profile',
-    color: COL_PURPLE,
-    footer: 'FXR Fluxora • Order Flow pour MotiveWave',
-    description:
-      "Une nouvelle étude rejoint la suite : **[FXR] Market Profile**, le profil TPO classique avec son volume profile, session par session.",
-    fields: [
-      { name: '🔤 Lettres TPO authentiques', value: 'Une lettre par tranche de temps (A, B, C…, 30 min par défaut), empilées à chaque prix visité.', inline: true },
-      { name: '📊 Volume + delta', value: 'Volume en **gris**, profil de **delta** par-dessus (bleu acheteurs / rouge vendeurs), à gauche, à droite ou derrière les lettres.', inline: true },
-      { name: '🎯 Niveaux', value: 'Value area (70 % réglable), POC volume, TPOC, single prints et stats V / Δ / range.', inline: true },
-      { name: '🕘 Sessions', value: 'RTH, Globex (ETH), 24 h ou **tes propres horaires** (heure de New York).', inline: true },
-      { name: '🗓️ Regroupement', value: 'Profils **journaliers**, **hebdo**, **mensuels** ou **composites N jours**.', inline: true },
-      { name: '⚙️ Réglages', value: 'Taille des lettres, largeur du VP, couleurs, affichage de chaque élément on/off.', inline: true },
-      { name: '📥 Installer', value: "1. Télécharge le nouveau **FXROrderFlow.jar** dans **#📥・téléchargements**\n2. **Ferme MotiveWave**, remplace l'ancien jar\n3. Relance, lance le **Loader** → **Study → FXR Studies → Market Profile**" },
+      { name: '📊 Volume Profile', value: '**Composite**, **Split** (jour / semaine / mois) ou **Visible Range**. RTH, session complète, overnight ou ETH + RTH. Styles Bars, Heatmap, Outline, **Holo**… Volume **gris + delta** bleu / rouge, bid / ask, ETH / RTH.' },
+      { name: '🔤 TPO Profile', value: 'Lettres par période façon **Sierra** (ou blocs), volume + delta attachés, TPO POC / VP POC, value area, midpoint, **singles prolongés jusqu\'au remplissage**, **poor / excess** high et low, **IB + extensions**, opening range, bloc de totaux.' },
+      { name: '🎯 Niveaux', value: 'Lignes projetées (prolongées jusqu\'au retest), étiquettes avec prix, tags sur le bord droit, valeurs exportées et signaux au contact des niveaux.' },
+      { name: '📥 Installer', value: "1. Télécharge le nouveau **FXROrderFlow.jar** dans **#📥・téléchargements**\n2. **Ferme MotiveWave**, remplace l'ancien jar\n3. Relance, lance le **Loader** → **Study → FXR Studies → Volume Profile / TPO Profile**\n4. Si tu avais le Market Profile sur un graphique, retire-le et ajoute **TPO Profile**" },
     ],
   },
 ];

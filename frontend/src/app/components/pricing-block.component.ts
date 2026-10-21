@@ -44,7 +44,7 @@ import { Plan } from '../core/models';
           <div class="total num">{{ p.price }} <small>USDT {{ p.lifetime ? 'once' : '/ ' + p.label.toLowerCase().replace('monthly', 'month') }}</small></div>
         }
         <ul class="checks" style="margin:18px 0 22px">
-          <li>Big Trades, Deep Trades, Delta Bars, Delta Heatmap, Absorption &amp; Imbalances, Leg to Leg, Market Profile, Volume Profile, Daily Market Info</li>
+          <li>Big Trades, Deep Trades, Delta Bars, Delta Heatmap, Absorption &amp; Imbalances, Leg to Leg, Volume Profile, TPO Profile, Daily Market Info</li>
           <li>Automatic updates through FXR Loader</li>
           <li>Every future study at no extra cost</li>
           <li>Private Discord role, install channel and support</li>

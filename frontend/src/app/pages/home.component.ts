@@ -20,7 +20,7 @@ import { FAQ } from './faq.data';
           <span class="l rise grad" style="--d:180ms">See size before</span>
           <span class="l rise" style="--d:280ms">the move.</span>
         </h1>
-        <p class="lead rise" style="--d:380ms">Nine studies built on every tick and on market-by-order data: big trades, who hit whom, delta, market and volume profiles and the levels that matter, right on your MotiveWave charts.</p>
+        <p class="lead rise" style="--d:380ms">Nine studies built on every tick and on market-by-order data: big trades, who hit whom, delta, volume and TPO profiles and the levels that matter, right on your MotiveWave charts.</p>
         <div class="hero-cta rise" style="--d:460ms">
           <a class="btn btn-primary" routerLink="/pricing">Get the bundle <app-icon name="arrow" /></a>
           <a class="btn btn-ghost" routerLink="/studies">Explore the studies</a>

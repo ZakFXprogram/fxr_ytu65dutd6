@@ -53,11 +53,11 @@ export const STUDIES: StudyInfo[] = [
     data: 'Tick-by-tick data with bid/ask side.',
   },
   {
-    slug: 'market-profile', name: 'Market Profile', tag: 'Profiles', img: 'market_profile',
-    blurb: 'Classic TPO letters with a grey volume profile and a blue/red delta profile per session: POC, value area, TPOC, single prints, for RTH, Globex or your own hours.',
-    about: 'Market Profile builds, for every session, the letter profile traders have read for decades: one letter per time bracket, stacked at each price the market visited. A grey volume profile with the delta profile drawn over it (blue for buyers, red for sellers) sits beside or behind the letters, with the value area, volume POC, TPOC and single prints marked. Choose the session (RTH, Globex, 24 hours or your own hours) and group days into weekly, monthly or N-day composites.',
-    points: ['Authentic TPO letters (A, B, C…) per time bracket', 'Grey volume profile with a blue / red delta profile', 'Value area, POC, TPOC and single prints', 'RTH / Globex / 24 h / custom sessions, daily to monthly composites'],
-    data: 'Tick-by-tick data with bid/ask side.',
+    slug: 'tpo-profile', name: 'TPO Profile', tag: 'Profiles', img: 'tpo_profile',
+    blurb: 'Sierra-style TPO letters per period with an attached volume and delta profile, value area, singles, poor / excess extremes, IB and opening range.',
+    about: 'TPO Profile draws each session the way market profile traders read it: one letter per time period, stacked at every price the market visited, with the TPO and volume POC, value area, midpoint and single prints. Poor and excess highs and lows are flagged, the initial balance and opening range are drawn with their extensions, and a volume profile (grey with the delta in blue / red) sits beside the letters. RTH, full session, overnight or ETH and RTH separately, split by day or as a composite.',
+    points: ['Letters or blocks per period, packed, aligned or spread over the session', 'TPO + volume POC, value area, midpoint, singles extended until filled', 'Poor / excess extremes, initial balance with extensions, opening range', 'Attached volume + delta profile, totals block, projected lines and price tags'],
+    data: 'Tick-by-tick data with bid/ask side (bars fill in where ticks are missing).',
   },
   {
     slug: 'volume-profile', name: 'Volume Profile', tag: 'Profiles', img: 'volume_profile',
