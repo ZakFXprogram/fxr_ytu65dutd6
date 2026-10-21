@@ -60,6 +60,13 @@ export const STUDIES: StudyInfo[] = [
     data: 'Tick-by-tick data with bid/ask side.',
   },
   {
+    slug: 'volume-profile', name: 'Volume Profile', tag: 'Profiles', img: 'volume_profile',
+    blurb: 'Composite, per-session or visible-range volume profiles from every tick, with delta, value area, POC, volume nodes and nine drawing styles.',
+    about: 'Volume Profile shows where volume traded, built from every tick with its buy / sell side. Build one composite over the last days, weeks or months, one profile per day, week or month, or a profile of exactly what is on screen. Choose regular hours, the full session, the overnight or ETH and RTH separately, then draw it as bars, heatmap, outline or glowing holo, coloured by delta, bid / ask or ETH / RTH.',
+    points: ['Composite, split (day / week / month) or visible range', 'RTH, full session, overnight or ETH + RTH split, with exchange presets', 'Value area, POC extended until touched, HVN / LVN nodes', 'Bars, heatmap, outline, holo styles; delta, bid / ask or ETH / RTH colours'],
+    data: 'Tick-by-tick data with bid/ask side (bars fill in where ticks are missing).',
+  },
+  {
     slug: 'daily-market-info', name: 'Daily Market Info', tag: 'Levels', img: 'daily_market_info_full',
     blurb: 'Every session level that matters on one chart: opens, prior day/week/month, value areas, initial balance, VWAP bands and an economic calendar.',
     about: 'Daily Market Info puts the reference levels traders check every morning on one chart, session by session: opens, prior highs and lows, value areas, opening range and initial balance, VWAPs with bands, and the day\'s economic events filtered by impact.',

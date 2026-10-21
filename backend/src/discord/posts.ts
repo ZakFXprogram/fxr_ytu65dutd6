@@ -22,6 +22,10 @@ const COL_PURPLE = 8080895;
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
+  '2.7.0':
+    `🆕 **Nouvelle étude : Volume Profile** — composite, par jour / semaine / mois ou zone visible ; RTH, session complète, ` +
+    `overnight ou ETH + RTH séparés ; styles Bars, Heatmap, Outline, Holo… ; volume gris + delta bleu / rouge, bid / ask ou ` +
+    `ETH / RTH ; value area, POC prolongé jusqu'au retest, HVN / LVN, niveaux exportés et signaux. Menu **Study → FXR Studies → Volume Profile**.`,
   '2.6.1':
     `🆕 **Nouvelle étude : Market Profile** — lettres TPO (A, B, C…), volume profile en gris avec le profil de delta ` +
     `(bleu acheteurs / rouge vendeurs) par-dessus, ` +
@@ -113,7 +117,7 @@ export const POSTS: Post[] = [
     footer: "Ta question n'est pas là ? Pose-la dans #🆘・support • FXR Fluxora",
     description: 'Les questions qui reviennent le plus souvent.',
     fields: [
-      { name: "C'est quoi FXR Fluxora ?", value: "Une suite d'études **order flow** pour MotiveWave : Big Trades, Deep Trades, Delta Bars, Delta Heatmap, Absorption & Imbalances, Leg to Leg, Market Profile et Daily Market Info." },
+      { name: "C'est quoi FXR Fluxora ?", value: "Une suite d'études **order flow** pour MotiveWave : Big Trades, Deep Trades, Delta Bars, Delta Heatmap, Absorption & Imbalances, Leg to Leg, Market Profile, Volume Profile et Daily Market Info." },
       { name: 'Sur quelle plateforme ?', value: '**MotiveWave** (version récente), sur **Windows** et **macOS**. Le même `FXROrderFlow.jar` sert pour les deux.' },
       { name: 'Quelles données de marché ?', value: 'Un flux **tick par tick** avec le côté agresseur (bid/ask), ex. Rithmic ou CQG sur les futures CME. Sans données tick, les études order flow restent vides.' },
       { name: 'Comment obtenir une licence ?', value: "Via le **site** (paiement), ou une **clé** donnée par le staff : tape `/activer` sur le serveur et colle-la. Le rôle arrive instantanément." },
@@ -141,6 +145,22 @@ export const POSTS: Post[] = [
       { name: '🗓️ Daily Market Info', value: 'OHLC, value area, OR / IB, VWAP, opens clés, gaps et calendrier des news.', inline: true },
       { name: '✅ Pour commencer', value: "1. Obtiens ta licence sur le **site**, ou active ta clé avec `/activer`\n2. Télécharge le jar dans **#📥・téléchargements**\n3. Suis **#🛠️・installation**\n4. Partage tes setups dans **#📊・setups**" },
       { name: '📌 À lire', value: '**#📜・règles** et **#❓・faq**. Bienvenue à tous, et bons trades ! 🎯' },
+    ],
+  },
+  {
+    id: 'update_2_7_0',
+    title: '🆕 Mise à jour 2.7.0 — Volume Profile',
+    color: COL_PURPLE,
+    footer: 'FXR Fluxora • Order Flow pour MotiveWave',
+    description: "Nouvelle étude : **[FXR] Volume Profile**, construite sur chaque tick avec le côté acheteur / vendeur.",
+    fields: [
+      { name: '🧩 Modes', value: '**Composite** (N jours / semaines / mois), **Split** (un profil par jour, semaine ou mois) ou **Visible Range** (ce qui est à l\'écran).', inline: true },
+      { name: '🕘 Sessions', value: 'RTH, session complète, overnight ou **ETH + RTH séparés**, avec presets (indices US, énergie, métaux, taux, grains, Eurex) ou horaires perso.', inline: true },
+      { name: '🎨 Styles', value: 'Bars, Heatmap, Outline, Outline + Fill, **Holo**, combinaisons… Forme en escalier ou lissée.', inline: true },
+      { name: '🌈 Couleurs', value: 'Volume **gris + delta** bleu / rouge, bid / ask, ETH / RTH, dégradé ou couleur unie.', inline: true },
+      { name: '🎯 Niveaux', value: 'Value area, **POC prolongé jusqu\'au retest** (naked POC), HVN / LVN, marqueurs open / close, légende.', inline: true },
+      { name: '📤 Export', value: 'POC / VAH / VAL exportés pour d\'autres études et alertes, signaux au contact des niveaux.', inline: true },
+      { name: '📥 Installer', value: "1. Télécharge le nouveau **FXROrderFlow.jar** dans **#📥・téléchargements**\n2. **Ferme MotiveWave**, remplace l'ancien jar\n3. Relance, lance le **Loader** → **Study → FXR Studies → Volume Profile**" },
     ],
   },
   {

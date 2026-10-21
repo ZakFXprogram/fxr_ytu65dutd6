@@ -20,13 +20,13 @@ import { FAQ } from './faq.data';
           <span class="l rise grad" style="--d:180ms">See size before</span>
           <span class="l rise" style="--d:280ms">the move.</span>
         </h1>
-        <p class="lead rise" style="--d:380ms">Eight studies built on every tick and on market-by-order data: big trades, who hit whom, delta, market profile and the levels that matter, right on your MotiveWave charts.</p>
+        <p class="lead rise" style="--d:380ms">Nine studies built on every tick and on market-by-order data: big trades, who hit whom, delta, market and volume profiles and the levels that matter, right on your MotiveWave charts.</p>
         <div class="hero-cta rise" style="--d:460ms">
           <a class="btn btn-primary" routerLink="/pricing">Get the bundle <app-icon name="arrow" /></a>
           <a class="btn btn-ghost" routerLink="/studies">Explore the studies</a>
         </div>
         <div class="hero-facts rise" style="--d:560ms">
-          <div><b class="num" [fxrCount]="8"></b><span>studies in one bundle</span></div>
+          <div><b class="num" [fxrCount]="9"></b><span>studies in one bundle</span></div>
           <div><b class="num" [fxrCount]="8"></b><span>USDT a month</span></div>
           <div><b class="num" [fxrCount]="67"></b><span>USDT for lifetime</span></div>
         </div>
@@ -63,7 +63,7 @@ import { FAQ } from './faq.data';
     <section class="wrap section" style="padding-top:0">
       <div class="sec-head">
         <h2 fxrReveal>The studies</h2>
-        <p fxrReveal="80">Each one does one job well, and they share the same data so they agree with each other. All eight come in the bundle.</p>
+        <p fxrReveal="80">Each one does one job well, and they share the same data so they agree with each other. All nine come in the bundle.</p>
       </div>
       <div class="studies">
         @for (s of studies; track s.slug; let i = $index) {
@@ -130,7 +130,7 @@ import { FAQ } from './faq.data';
     <section class="wrap section" style="padding-top:0">
       <div class="cta-band" fxrReveal>
         <h2>Put real order flow on your charts</h2>
-        <p>All eight studies, automatic updates and the Discord community, from 8 USDT a month.</p>
+        <p>All nine studies, automatic updates and the Discord community, from 8 USDT a month.</p>
         <div class="row" style="justify-content:center">
           <a class="btn btn-primary" routerLink="/pricing">See pricing</a>
           <a class="btn btn-ghost" routerLink="/studies">Browse the studies</a>
