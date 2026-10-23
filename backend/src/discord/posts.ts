@@ -22,6 +22,9 @@ const COL_PURPLE = 8080895;
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
+  '2.9.1':
+    `🔧 **CVD · Stops & Icebergs** : le HUD affiche **CVD** (au lieu de « Volume ») et les barres partent d'un **point milieu** : ` +
+    `vers la droite quand la valeur est positive, vers la gauche quand elle est négative.`,
   '2.9.0':
     `🆕 **Nouvelle étude : CVD · Stops & Icebergs** (panneau sous le graphique, façon Bookmap) — le delta cumulé, ` +
     `le cumul des **stops déclenchés** (cascades d'ordres agressifs dans la même milliseconde après une cassure) et le cumul des ` +
@@ -165,10 +168,10 @@ export const POSTS: Post[] = [
     footer: 'FXR Fluxora • Order Flow pour MotiveWave',
     description: "Nouvelle étude en panneau sous le graphique, pour voir **en direct** ce que le carnet cache.",
     fields: [
-      { name: '🔵 Volume (CVD)', value: 'Le delta cumulé, remis à zéro à chaque séance RTH, chaque jour, à l\'heure de ton choix, ou jamais.', inline: true },
+      { name: '🔵 CVD', value: 'Le delta cumulé, remis à zéro à chaque séance RTH, chaque jour, à l\'heure de ton choix, ou jamais.', inline: true },
       { name: '🟠 Stops', value: 'Le cumul des **stops déclenchés** : plusieurs ordres agressifs dans la même milliseconde juste après une cassure. Achat +, vente -.', inline: true },
       { name: '🟣 Icebergs', value: 'Le cumul des **ordres cachés** : un niveau qui encaisse plus que ce qu\'il affiche et qui tient. Bid caché +, offre cachée -.', inline: true },
-      { name: '📟 HUD & alertes', value: 'Valeurs et barres en direct en haut à droite, gros événements marqués, alertes sur les grosses cascades et les gros icebergs, valeurs exportées.' },
+      { name: '📟 HUD & alertes', value: 'Valeurs et barres en direct en haut à droite (point milieu : à droite si positif, à gauche si négatif), gros événements marqués, alertes sur les grosses cascades et les gros icebergs, valeurs exportées.' },
       { name: '📥 Installer', value: "1. Télécharge le nouveau **FXROrderFlow.jar** dans **#📥・téléchargements**\n2. **Ferme MotiveWave**, remplace l'ancien jar\n3. Relance, lance le **Loader** → **Study → FXR Studies → CVD · Stops & Icebergs**\n\nDonnées tick par tick avec bid / ask nécessaires (Rithmic recommandé)." },
     ],
   },
