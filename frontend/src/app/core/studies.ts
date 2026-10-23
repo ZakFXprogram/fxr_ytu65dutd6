@@ -25,6 +25,13 @@ export const STUDIES: StudyInfo[] = [
     data: 'Market-by-order (MBO) data enabled in MotiveWave.',
   },
   {
+    slug: 'cvd-stops-icebergs', name: 'CVD · Stops & Icebergs', tag: 'Aggression', img: 'cvd_stops_icebergs',
+    blurb: 'Cumulative delta with the hidden flow under it: stop orders triggered in cascades and iceberg orders refilling at a level, live, Bookmap style.',
+    about: 'CVD · Stops & Icebergs puts three lines under your chart. The cumulative volume delta, reset each session or day. The running total of triggered stop orders, found when several aggressive orders sweep in the same millisecond right after price breaks a level. And the running total of iceberg orders, found when a level absorbs more than the book displayed and still holds. A live panel shows the three values, and the largest events are marked.',
+    points: ['CVD reset per RTH session, trading day, custom time or never', 'Triggered buy / sell stop cascades, cumulated', 'Hidden bids / offers (icebergs), cumulated', 'Live HUD, markers on the largest events, signals and exported values'],
+    data: 'Tick-by-tick data with bid/ask and the top of book (Rithmic recommended).',
+  },
+  {
     slug: 'delta-bars', name: 'Delta Bars', tag: 'Order flow', img: 'delta_bars',
     blurb: 'Colours each candle by an RSI computed on its delta, so you see who is really in control bar by bar.',
     about: 'Delta Bars turns the balance between aggressive buyers and sellers into candle colour. Because the colour comes from an RSI of delta rather than raw delta, it adapts to the instrument and the session, and the moments where colour and price disagree become easy to spot.',

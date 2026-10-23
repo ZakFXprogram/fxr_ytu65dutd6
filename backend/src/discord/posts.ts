@@ -22,6 +22,11 @@ const COL_PURPLE = 8080895;
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
+  '2.9.0':
+    `🆕 **Nouvelle étude : CVD · Stops & Icebergs** (panneau sous le graphique, façon Bookmap) — le delta cumulé, ` +
+    `le cumul des **stops déclenchés** (cascades d'ordres agressifs dans la même milliseconde après une cassure) et le cumul des ` +
+    `**icebergs** (un niveau qui encaisse plus que ce qu'il affiche et tient). HUD en direct, gros événements marqués, alertes. ` +
+    `Menu **Study → FXR Studies → CVD · Stops & Icebergs**.`,
   '2.8.0':
     `🆕 **Deux nouvelles études** : **Volume Profile** (composite / par jour, semaine, mois / zone visible ; RTH, session complète, ` +
     `overnight ou ETH + RTH ; styles Bars, Heatmap, Outline, Holo ; volume gris + delta bleu / rouge ; value area, POC jusqu'au retest, HVN / LVN) ` +
@@ -123,7 +128,7 @@ export const POSTS: Post[] = [
     footer: "Ta question n'est pas là ? Pose-la dans #🆘・support • FXR Fluxora",
     description: 'Les questions qui reviennent le plus souvent.',
     fields: [
-      { name: "C'est quoi FXR Fluxora ?", value: "Une suite d'études **order flow** pour MotiveWave : Big Trades, Deep Trades, Delta Bars, Delta Heatmap, Absorption & Imbalances, Leg to Leg, Volume Profile, TPO Profile et Daily Market Info." },
+      { name: "C'est quoi FXR Fluxora ?", value: "Une suite d'études **order flow** pour MotiveWave : Big Trades, Deep Trades, CVD · Stops & Icebergs, Delta Bars, Delta Heatmap, Absorption & Imbalances, Leg to Leg, Volume Profile, TPO Profile et Daily Market Info." },
       { name: 'Sur quelle plateforme ?', value: '**MotiveWave** (version récente), sur **Windows** et **macOS**. Le même `FXROrderFlow.jar` sert pour les deux.' },
       { name: 'Quelles données de marché ?', value: 'Un flux **tick par tick** avec le côté agresseur (bid/ask), ex. Rithmic ou CQG sur les futures CME. Sans données tick, les études order flow restent vides.' },
       { name: 'Comment obtenir une licence ?', value: "Via le **site** (paiement), ou une **clé** donnée par le staff : tape `/activer` sur le serveur et colle-la. Le rôle arrive instantanément." },
@@ -151,6 +156,20 @@ export const POSTS: Post[] = [
       { name: '🗓️ Daily Market Info', value: 'OHLC, value area, OR / IB, VWAP, opens clés, gaps et calendrier des news.', inline: true },
       { name: '✅ Pour commencer', value: "1. Obtiens ta licence sur le **site**, ou active ta clé avec `/activer`\n2. Télécharge le jar dans **#📥・téléchargements**\n3. Suis **#🛠️・installation**\n4. Partage tes setups dans **#📊・setups**" },
       { name: '📌 À lire', value: '**#📜・règles** et **#❓・faq**. Bienvenue à tous, et bons trades ! 🎯' },
+    ],
+  },
+  {
+    id: 'update_2_9_0',
+    title: '🆕 Mise à jour 2.9.0 — CVD · Stops & Icebergs',
+    color: COL_PURPLE,
+    footer: 'FXR Fluxora • Order Flow pour MotiveWave',
+    description: "Nouvelle étude en panneau sous le graphique, pour voir **en direct** ce que le carnet cache.",
+    fields: [
+      { name: '🔵 Volume (CVD)', value: 'Le delta cumulé, remis à zéro à chaque séance RTH, chaque jour, à l\'heure de ton choix, ou jamais.', inline: true },
+      { name: '🟠 Stops', value: 'Le cumul des **stops déclenchés** : plusieurs ordres agressifs dans la même milliseconde juste après une cassure. Achat +, vente -.', inline: true },
+      { name: '🟣 Icebergs', value: 'Le cumul des **ordres cachés** : un niveau qui encaisse plus que ce qu\'il affiche et qui tient. Bid caché +, offre cachée -.', inline: true },
+      { name: '📟 HUD & alertes', value: 'Valeurs et barres en direct en haut à droite, gros événements marqués, alertes sur les grosses cascades et les gros icebergs, valeurs exportées.' },
+      { name: '📥 Installer', value: "1. Télécharge le nouveau **FXROrderFlow.jar** dans **#📥・téléchargements**\n2. **Ferme MotiveWave**, remplace l'ancien jar\n3. Relance, lance le **Loader** → **Study → FXR Studies → CVD · Stops & Icebergs**\n\nDonnées tick par tick avec bid / ask nécessaires (Rithmic recommandé)." },
     ],
   },
   {

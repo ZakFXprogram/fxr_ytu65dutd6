@@ -40,7 +40,7 @@ import { RevealDirective, SpotDirective } from '../core/motion';
             </div>
             <div class="card bundle" fxrReveal="220">
               <h3 style="margin-bottom:6px">Get {{ s.name }} with the bundle</h3>
-              <p class="mut">All nine studies, automatic updates and the Discord community, from 8 USDT a month.</p>
+              <p class="mut">All ten studies, automatic updates and the Discord community, from 8 USDT a month.</p>
               <a class="btn btn-primary btn-block" routerLink="/pricing">See pricing <app-icon name="arrow" /></a>
             </div>
           </div>
