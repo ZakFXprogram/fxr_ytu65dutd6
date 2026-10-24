@@ -43,6 +43,8 @@ const FOOTER = 'FXR Fluxora • Order flow for MotiveWave';
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
+  '2.9.3':
+    `📦 **One single jar.** FXR OrderFlow now ships as one file: the studies appear in **Study → FXR Studies** as soon as you install it (locked until your licence is confirmed), with **no second jar and no restart** needed. Add the **Loader** once to sign in and they unlock. Internally the code is now scrambled to make copying far harder.`,
   '2.9.2':
     `🎨 The default colour theme is now called **BlueWave** (blue / grey). Same colours as before; charts that used it switch over on their own.`,
   '2.9.1':
@@ -76,7 +78,7 @@ const TROUBLE =
   `**🛠 Trouble?**\n` +
   `• **🔴 Disconnected** badge / padlock → type \`/my-license\`, otherwise open a ticket in ${'#'}SUPPORT\n` +
   `• Wrong Discord account → open the Loader's settings → **OK** to try again\n` +
-  `• No FXR Studies menu → check the Loader is connected (green badge), then restart MotiveWave once\n`;
+  `• Studies stay locked → check the Loader shows a **🟢 Connected** badge; if not, type \`/my-license\`\n`;
 
 function trouble(last: string): string {
   return TROUBLE.replace(`#SUPPORT`, channel('support')) + last;
@@ -98,8 +100,8 @@ export const POSTS: Post[] = [
       '```\n%USERPROFILE%\\MotiveWave Extensions\n```' +
       `If it does not exist, create it with this exact name in \`C:\\Users\\<your name>\\\`.\n\n` +
       `**4 · Copy the jar into that folder**\nReplace the old one if Windows asks. There must be **only one** \`FXROrderFlow.jar\`.\n\n` +
-      `**5 · Restart MotiveWave and add the Loader**\nMenu **Study → FXR OrderFlow → Loader**, add it to a chart. A sign-in page opens → sign in with Discord. A **🟢 Connected** badge appears at the bottom left.\n\n` +
-      `**6 · The studies**\nOnce connected, they appear in **Study → FXR Studies** (Big Trades, Volume Profile, TPO Profile…). If the menu does not show right away, restart MotiveWave once.\n\n` +
+      `**5 · Start MotiveWave and add the Loader**\nMenu **Study → FXR OrderFlow → Loader**, add it to a chart. A sign-in page opens → sign in with Discord. A **🟢 Connected** badge appears at the bottom left.\n\n` +
+      `**6 · The studies**\nThey are already in **Study → FXR Studies** (Big Trades, Volume Profile, TPO Profile…), shown with a lock until you sign in with the Loader. Once the badge is **🟢 Connected**, they unlock — no restart needed.\n\n` +
       `**🔁 Updating**\nWith MotiveWave closed, replace the jar with the new one.\n\n` +
       trouble(`• Still stuck → open a ticket in ${channel('support')} with a screenshot`),
   },
@@ -118,8 +120,8 @@ export const POSTS: Post[] = [
       '```\n~/MotiveWave Extensions\n```' +
       `If it does not exist, create it with this exact name in your home folder.\n\n` +
       `**4 · Drag the jar into that folder**\nReplace the old one if macOS asks. There must be **only one** \`FXROrderFlow.jar\`.\n\n` +
-      `**5 · Restart MotiveWave and add the Loader**\nMenu **Study → FXR OrderFlow → Loader**, add it to a chart. Your browser opens the sign-in page → sign in with Discord. A **🟢 Connected** badge appears at the bottom left.\n\n` +
-      `**6 · The studies**\nOnce connected, they appear in **Study → FXR Studies**. If the menu does not show right away, restart MotiveWave once.\n\n` +
+      `**5 · Start MotiveWave and add the Loader**\nMenu **Study → FXR OrderFlow → Loader**, add it to a chart. Your browser opens the sign-in page → sign in with Discord. A **🟢 Connected** badge appears at the bottom left.\n\n` +
+      `**6 · The studies**\nThey are already in **Study → FXR Studies**, shown with a lock until you sign in with the Loader. Once the badge is **🟢 Connected**, they unlock — no restart needed.\n\n` +
       `**🔁 Updating**\nWith MotiveWave quit, replace the jar with the new one.\n\n` +
       trouble(`• Nothing to allow in System Settings → Privacy: MotiveWave loads the jar`),
   },
@@ -152,7 +154,7 @@ export const POSTS: Post[] = [
       { name: 'Which market data?', value: 'A **tick-by-tick** feed with the aggressor side (bid/ask), e.g. Rithmic or CQG on CME futures. Without tick data the order flow studies stay empty.' },
       { name: 'How do I get a license?', value: 'On the **website** (payment), or with a **key** from the staff: type `/activate` on the server and paste it. The role is given instantly.' },
       { name: 'How do I check my license?', value: 'Type `/my-license`: type, status and end date. The bot also sends you a **private message before it expires**.' },
-      { name: 'How does it work in MotiveWave?', value: 'Add **Study → FXR OrderFlow → Loader**: it checks your role through Discord (**Connected** badge at the bottom left), then the **FXR Studies** menu appears with every study. We **never** get your password.' },
+      { name: 'How does it work in MotiveWave?', value: 'Add **Study → FXR OrderFlow → Loader**: it checks your role through Discord (**Connected** badge at the bottom left), the **FXR Studies** (which are in the menu from the start, locked) then unlock. Everything is in one jar; we **never** get your password.' },
       { name: 'Disconnected badge / padlock', value: 'Your license has expired or you are on another Discord account. Check with `/my-license`. To switch accounts: Loader settings → **OK**.' },
       { name: 'Does it work offline?', value: 'Yes, for up to **72 h** after the last successful check. After that it needs a connection to check again.' },
       { name: 'Several computers?', value: 'Yes, on your own machines with **your** Discord account. Sharing an account or a license is forbidden.' },

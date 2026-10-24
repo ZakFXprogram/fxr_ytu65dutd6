@@ -34,7 +34,7 @@ import { RevealDirective, SpotDirective } from '../core/motion';
         </div>
         <div class="card step" fxrSpot fxrReveal="200">
           <h3>Install and sign in</h3>
-          <p>Your role unlocks <strong>#téléchargements</strong> with the FXR Loader download. In MotiveWave, add <strong>Study → FXR OrderFlow → Loader</strong>, click <strong>Authorize</strong> on the Discord page, and the <strong>FXR Studies</strong> menu appears. No key to type.</p>
+          <p>Your role unlocks <strong>#downloads</strong> with the FXR Loader download. In MotiveWave, the <strong>FXR Studies</strong> are in the menu as soon as you drop in the jar (locked). Add <strong>Study → FXR OrderFlow → Loader</strong>, click <strong>Authorize</strong> on the Discord page, and they unlock. One jar, no restart, no key to type.</p>
         </div>
       </div>
     </section>

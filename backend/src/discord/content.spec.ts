@@ -48,8 +48,9 @@ describe('ContentService.publishJar', () => {
     expect(props).toContain('guild_id=1559617778552537131');
     expect(props).toContain('role_ids=1559617891819724850,1559628850869182484');
     expect(props).toContain('user_ids=367247878382419970');
-    // the encrypted module must be carried over unchanged
-    expect(readEntry(jar, 'modules/fxrof.blob')).not.toBeNull();
+    // single jar: the studies ship directly inside it (no separate encrypted module anymore)
+    expect(readEntry(jar, 'module-version')!.toString('ascii').trim()).toMatch(/^\d+\.\d+\.\d+$/);
+    expect(readEntry(jar, 'com/fxr/orderflow/loader/Loader.class')).not.toBeNull();
     expect(bot.lastUpload!.filename).toBe('FXROrderFlow.jar');
     expect(db.meta.get('jar:release')).toContain('msg-1');
   });
