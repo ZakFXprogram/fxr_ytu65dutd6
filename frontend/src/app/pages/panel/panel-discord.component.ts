@@ -1,7 +1,7 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Observable } from 'rxjs';
-import { ApiService, apiError, type BotStatus, type BotPost } from '../../core/api.service';
+import { ApiService, apiError, type BotStatus, type BotPost, type SetupPlan, type SetupReport } from '../../core/api.service';
 
 /**
  * Discord bot controls (the FXR Manager replacement): register the slash commands, publish/refresh the channel
@@ -28,10 +28,42 @@ import { ApiService, apiError, type BotStatus, type BotPost } from '../../core/a
           <code class="copyable" (click)="copy(s.interactionsUrl)">{{ s.interactionsUrl }}</code>
         </div>
 
+        <!-- english + tickets + templates -->
+        <div class="card" style="padding:16px;margin-top:14px">
+          <h3 style="margin:0 0 6px">Serveur en anglais · tickets · templates</h3>
+          <p class="mut small" style="margin:0 0 10px">
+            Renomme en anglais les salons, catégories et rôles en français, crée <b>#🧩・templates</b> (visible Premium / Affilié / staff),
+            publie le panneau de tickets dans <b>#support</b> (License / Installation / Payment / Other → salon privé),
+            remet en anglais les messages du bot et réenregistre les commandes. Le bot a besoin de « Gérer les salons » et « Gérer les rôles ».
+          </p>
+          <div class="postact">
+            <button class="btn btn-ghost btn-sm" [disabled]="busy()" (click)="previewSetup()">1 · Aperçu</button>
+            <button class="btn btn-sm" [disabled]="busy() || !plan()" (click)="applySetup()">2 · Appliquer</button>
+          </div>
+          @if (plan(); as p) {
+            <div class="small" style="margin-top:12px">
+              <b>{{ p.renames.length }} renommage(s)</b>
+              @for (r of p.renames; track r.id) { <div class="mono">{{ r.kind }} · {{ r.from }} → {{ r.to }}</div> }
+              @if (p.untranslated.length) {
+                <div style="margin-top:8px;color:#e67e22">Mots non traduits (laissés tels quels) :</div>
+                @for (r of p.untranslated; track r.id) { <div class="mono">{{ r.from }} ({{ r.unknown.join(', ') }})</div> }
+              }
+              <div style="margin-top:8px">Panneau tickets : {{ p.support ? '#' + p.support : '⚠️ aucun salon #support trouvé' }}</div>
+              <div>Templates : {{ p.templates.exists ? 'existe déjà (' + p.templates.name + ')' : 'sera créé : #' + p.templates.name }}</div>
+            </div>
+          }
+          @if (report(); as r) {
+            <div class="small" style="margin-top:12px">
+              <div>✅ {{ r.renamed.length }} renommé(s) · templates : {{ r.templatesChannel ?? '—' }} · tickets : {{ r.ticketPanel ?? '—' }} · {{ r.postsUpdated.length }} message(s) mis à jour · jar : {{ r.jarText ? 'OK' : '—' }} · {{ r.commands }} commandes</div>
+              @for (f of r.failed; track f) { <div style="color:#e74c3c">⚠️ {{ f }}</div> }
+            </div>
+          }
+        </div>
+
         <!-- commands -->
         <div class="card" style="padding:16px;margin-top:14px">
           <h3 style="margin:0 0 6px">Commandes slash</h3>
-          <p class="mut small" style="margin:0 0 10px">(Ré)enregistre /licence, /cle, /activer et /ma-licence sur le serveur. À faire une fois (et après chaque changement).</p>
+          <p class="mut small" style="margin:0 0 10px">(Ré)enregistre /license, /key, /activate et /my-license sur le serveur. À faire une fois (et après chaque changement).</p>
           <button class="btn btn-sm" [disabled]="busy()" (click)="register()">Enregistrer les commandes</button>
         </div>
 
@@ -93,7 +125,7 @@ import { ApiService, apiError, type BotStatus, type BotPost } from '../../core/a
     .postrow:first-of-type { border-top:0; }
     .postact { display:flex; gap:8px; align-items:center; }
     .inp-sm { width:170px; padding:6px 8px; font-size:12px; background:#0d1117; border:1px solid #2b3240; border-radius:6px; color:inherit; }
-    .note { color:#2ecc71; }
+    .note { color:#2ecc71; } .mono { font-family:ui-monospace,monospace; font-size:12px; padding:2px 0; }
   `],
 })
 export class PanelDiscordComponent {
@@ -103,6 +135,8 @@ export class PanelDiscordComponent {
   channel: Record<string, string> = {};
   inviteChannel = '';
   busy = signal(false);
+  plan = signal<SetupPlan | null>(null);
+  report = signal<SetupReport | null>(null);
   msg = signal('');
   err = signal('');
 
@@ -139,6 +173,13 @@ export class PanelDiscordComponent {
   }
   runReminders(): void {
     this.run(this.api.runReminders(), (r) => (r.ok ? `✅ ${r.sent} rappel(s) envoyé(s), ${r.failed} en échec.` : '⚠️ ' + (r.error ?? 'désactivé')));
+  }
+  previewSetup(): void {
+    this.report.set(null);
+    this.run(this.api.setupPreview(), (p) => { this.plan.set(p); return `Aperçu : ${p.renames.length} renommage(s).`; });
+  }
+  applySetup(): void {
+    this.run(this.api.setupApply(), (r) => { this.report.set(r); this.plan.set(null); return r.failed.length ? `Terminé avec ${r.failed.length} échec(s).` : '✅ Serveur passé en anglais.'; });
   }
   copy(text: string): void {
     void navigator.clipboard?.writeText(text);

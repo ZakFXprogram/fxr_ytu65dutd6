@@ -13,7 +13,8 @@ import {
 import { CodesService, type CodeRow } from '../codes/codes.service';
 import { RoleSyncService } from '../roles/role-sync.service';
 import { channel } from './posts';
-import { caller, ephemeral, sub, INTERACTION_PING, INTERACTION_COMMAND, REPLY_PONG, type Interaction, type Reply } from './commands';
+import { TicketsService } from './tickets.service';
+import { caller, ephemeral, sub, INTERACTION_PING, INTERACTION_COMMAND, INTERACTION_COMPONENT, INTERACTION_MODAL, REPLY_PONG, type Interaction, type Reply } from './commands';
 
 // SubjectPublicKeyInfo DER prefix for an Ed25519 raw public key (RFC 8410).
 const ED25519_SPKI_PREFIX = Buffer.from('302a300506032b6570032100', 'hex');
@@ -32,6 +33,7 @@ export class InteractionsService {
     private readonly licences: LicencesService,
     private readonly codes: CodesService,
     private readonly roles: RoleSyncService,
+    private readonly tickets: TicketsService,
     @Inject(CONFIG) private readonly cfg: AppConfig,
   ) {}
 
@@ -56,6 +58,14 @@ export class InteractionsService {
 
   handle(i: Interaction): Reply {
     if (i.type === INTERACTION_PING) return { type: REPLY_PONG };
+    if ((i.type === INTERACTION_COMPONENT || i.type === INTERACTION_MODAL) && this.tickets.owns(i)) {
+      try {
+        return this.tickets.handle(i);
+      } catch (e) {
+        this.log.warn(`ticket action failed: ${(e as Error).message}`);
+        return ephemeral('⚠️ Something went wrong. Please try again in a moment.');
+      }
+    }
     if (i.type !== INTERACTION_COMMAND || !i.data) return ephemeral('Unknown command.');
     try {
       switch (i.data.name) {

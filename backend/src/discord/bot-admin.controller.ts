@@ -10,6 +10,7 @@ import { ContentService } from './content.service';
 import { RemindersService } from './reminders.service';
 import { DbService } from '../db/db.service';
 import { commandDefinitions } from './commands';
+import { SetupService } from './setup.service';
 
 const SNOWFLAKE = /^\d{17,20}$/;
 
@@ -35,6 +36,7 @@ export class BotAdminController {
     private readonly content: ContentService,
     private readonly reminders: RemindersService,
     private readonly db: DbService,
+    private readonly setup: SetupService,
     @Inject(CONFIG) private readonly cfg: AppConfig,
   ) {}
 
@@ -123,6 +125,21 @@ export class BotAdminController {
     if (!SNOWFLAKE.test(channelId)) throw new BadRequestException('Aucun salon #téléchargements configuré');
     const r = await this.discord(() => this.content.publishJar(channelId));
     return { ok: true, ...r, by: a.user.id };
+  }
+
+  /** What "switch the server to English" would change (nothing is changed). */
+  @Get('setup-preview')
+  async setupPreview() {
+    if (!this.bot.configured) throw new BadRequestException('Bot non configuré');
+    return this.discord(() => this.setup.preview());
+  }
+
+  /** Renames to English, creates #templates, posts the ticket panel, re-edits the bot's messages, re-registers commands. */
+  @Post('setup-apply')
+  @Throttle({ default: { limit: 3, ttl: 60_000 } })
+  async setupApply(@CurrentAuth() a: AuthContext) {
+    if (!this.bot.configured) throw new BadRequestException('Bot non configuré');
+    return this.discord(() => this.setup.apply(a.user.id));
   }
 
   /** Runs the expiry-reminder pass now (also runs on its own schedule when enabled). */

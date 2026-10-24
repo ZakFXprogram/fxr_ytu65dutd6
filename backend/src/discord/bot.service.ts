@@ -4,7 +4,31 @@ import { CONFIG, type AppConfig } from '../config';
 export interface MessagePayload {
   content?: string;
   embeds?: unknown[];
-  allowed_mentions?: { parse: string[] };
+  components?: unknown[];
+  allowed_mentions?: { parse: string[]; users?: string[]; roles?: string[] };
+}
+
+export interface GuildChannel {
+  id: string;
+  type: number;
+  name: string;
+  position?: number;
+  parent_id?: string | null;
+  topic?: string | null;
+}
+
+export interface GuildRole {
+  id: string;
+  name: string;
+  position: number;
+  managed?: boolean;
+}
+
+export interface Overwrite {
+  id: string;
+  type: 0 | 1; // 0 = role, 1 = member
+  allow: string;
+  deny: string;
 }
 
 export interface GuildMember {
@@ -121,6 +145,64 @@ export class BotService {
       unique: false,
     });
     return `https://discord.gg/${r.code as string}`;
+  }
+
+  // ---------------------------------------------------------------- channels / roles (server setup, tickets)
+
+  get botUserId(): string {
+    return this.cfg.bot.appId; // a bot's user id is its application id
+  }
+
+  get guildId(): string {
+    return this.cfg.bot.guildId;
+  }
+
+  async listChannels(): Promise<GuildChannel[]> {
+    return (await this.api('GET', `/guilds/${this.cfg.bot.guildId}/channels`)) as unknown as GuildChannel[];
+  }
+
+  async listRoles(): Promise<GuildRole[]> {
+    return (await this.api('GET', `/guilds/${this.cfg.bot.guildId}/roles`)) as unknown as GuildRole[];
+  }
+
+  async getChannel(id: string): Promise<GuildChannel | null> {
+    try {
+      return (await this.api('GET', `/channels/${id}`)) as unknown as GuildChannel;
+    } catch (e) {
+      if ((e as ApiError).status === 404) return null;
+      throw e;
+    }
+  }
+
+  async createChannel(body: {
+    name: string;
+    type: number;
+    topic?: string;
+    parent_id?: string | null;
+    permission_overwrites?: Overwrite[];
+  }, reason: string): Promise<GuildChannel> {
+    return (await this.api('POST', `/guilds/${this.cfg.bot.guildId}/channels`, body, {
+      'X-Audit-Log-Reason': encodeURIComponent(reason),
+    })) as unknown as GuildChannel;
+  }
+
+  async patchChannel(id: string, body: Record<string, unknown>, reason: string): Promise<void> {
+    await this.api('PATCH', `/channels/${id}`, body, { 'X-Audit-Log-Reason': encodeURIComponent(reason) });
+  }
+
+  async deleteChannel(id: string, reason: string): Promise<void> {
+    await this.api('DELETE', `/channels/${id}`, undefined, { 'X-Audit-Log-Reason': encodeURIComponent(reason) });
+  }
+
+  async patchRole(id: string, body: Record<string, unknown>, reason: string): Promise<void> {
+    await this.api('PATCH', `/guilds/${this.cfg.bot.guildId}/roles/${id}`, body, {
+      'X-Audit-Log-Reason': encodeURIComponent(reason),
+    });
+  }
+
+  /** Replaces the original (deferred) response of an interaction. */
+  async editInteractionReply(token: string, payload: MessagePayload): Promise<void> {
+    await this.api('PATCH', `/webhooks/${this.cfg.bot.appId}/${token}/messages/@original`, this.msg(payload));
   }
 
   // ---------------------------------------------------------------- slash commands

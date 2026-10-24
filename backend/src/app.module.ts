@@ -22,6 +22,8 @@ import { AdminService } from './admin/admin.service';
 import { AdminController } from './admin/admin.controller';
 import { BotService } from './discord/bot.service';
 import { InteractionsService } from './discord/interactions.service';
+import { TicketsService } from './discord/tickets.service';
+import { SetupService } from './discord/setup.service';
 import { InteractionsController } from './discord/interactions.controller';
 import { BotAdminController } from './discord/bot-admin.controller';
 import { ContentService } from './discord/content.service';
@@ -59,6 +61,8 @@ import { LoaderSessionService } from './loader/loader-session.service';
     AdminService,
     BotService,
     InteractionsService,
+    TicketsService,
+    SetupService,
     ContentService,
     RemindersService,
     LoaderSessionService,

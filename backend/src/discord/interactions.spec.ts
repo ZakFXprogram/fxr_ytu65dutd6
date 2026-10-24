@@ -7,7 +7,7 @@ import type { AppConfig } from '../config';
 /** Builds a service whose only wired dependency is the config (enough for verify()/PING). */
 function serviceWithKey(publicKeyHex: string): InteractionsService {
   const cfg = { bot: { publicKey: publicKeyHex }, adminIds: new Set<string>() } as unknown as AppConfig;
-  return new InteractionsService(null as never, null as never, null as never, null as never, cfg);
+  return new InteractionsService(null as never, null as never, null as never, null as never, null as never, cfg);
 }
 
 describe('Discord interaction signature verification', () => {

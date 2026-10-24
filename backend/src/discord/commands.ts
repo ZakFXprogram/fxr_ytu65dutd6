@@ -2,8 +2,12 @@
 
 export const INTERACTION_PING = 1;
 export const INTERACTION_COMMAND = 2;
+export const INTERACTION_COMPONENT = 3;
+export const INTERACTION_MODAL = 5;
 export const REPLY_PONG = 1;
 export const REPLY_MESSAGE = 4;
+export const REPLY_DEFERRED = 5;
+export const REPLY_MODAL = 9;
 export const FLAG_EPHEMERAL = 64;
 
 const OPT_SUB = 1;
@@ -23,14 +27,21 @@ export interface Interaction {
   id?: string;
   token?: string;
   guild_id?: string;
-  data?: { name: string; options?: InteractionOption[] };
+  data?: {
+    name: string;
+    options?: InteractionOption[];
+    /** Buttons and modals. */
+    custom_id?: string;
+    components?: { components?: { custom_id: string; value?: string }[] }[];
+  };
+  channel_id?: string;
   member?: { user?: { id: string; username?: string; global_name?: string | null }; roles?: string[] };
   user?: { id: string; username?: string; global_name?: string | null };
 }
 
 export interface Reply {
   type: number;
-  data?: { content?: string; flags?: number };
+  data?: { content?: string; flags?: number; [k: string]: unknown };
 }
 
 export function ephemeral(content: string): Reply {

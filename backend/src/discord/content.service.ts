@@ -65,8 +65,17 @@ export class ContentService {
     const id = await this.bot.postFile(channelId, 'FXROrderFlow.jar', patched, jarReleaseText(version));
     if (prev) await this.bot.deleteMessage(prev.channelId, prev.messageId).catch(() => {});
     this.track('jar:release', channelId, id);
-    this.db.logEvent('bot', `Jar Loader v${version} publié dans #téléchargements`);
+    this.db.logEvent('bot', `Jar Loader v${version} publié dans #downloads`);
     return { messageId: id, version };
+  }
+
+  /** Rewrites the text of the current jar release message (e.g. after the release notes changed language). */
+  async refreshJarText(): Promise<boolean> {
+    const prev = this.tracked('jar:release');
+    if (!prev) return false;
+    const version = readEntry(this.loaderJar(), 'module-version')?.toString('ascii').trim() || '?';
+    await this.bot.editMessage(prev.channelId, prev.messageId, { content: jarReleaseText(version) });
+    return true;
   }
 
   /** The Loader's licence config (public ids only), built from this server's settings. */
