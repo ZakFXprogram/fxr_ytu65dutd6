@@ -43,6 +43,8 @@ const FOOTER = 'FXR Fluxora • Order flow for MotiveWave';
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
+  '2.9.11':
+    `🆕 **Volume Profile**: right-click a profile to **Split** it at that point, **Merge** it with the previous / next profile, or **Reset**. Your manual splits are kept with the study. (The same is coming to TPO next.)`,
   '2.9.10':
     `🆕 **New study: SP Volume** — up to **3 volume profiles side by side, pinned to the right**, each on the timeframe you choose (day / week / month). 🔧 Also: profiles now anchor on the day separator (no more ~30 min bleed), and the per-day Volume Profile sits in its day with **Active Profile Position = In Place**.`,
   '2.9.9':
