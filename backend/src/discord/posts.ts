@@ -43,6 +43,8 @@ const FOOTER = 'FXR Fluxora • Order flow for MotiveWave';
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
+  '2.9.8':
+    `🔧 **Volume Profile**: in **Split** mode each profile is now anchored to its whole day / week / month, from one separator to the next (new option **Anchor to Full Day / Week / Month**, on by default). Same for **TPO Profile** with Span Full Session.`,
   '2.9.7':
     `🔧 **TPO Profile**: with **Span Full Session** (or Auto-Fit), each profile is now anchored to the whole trading day — from the day's separator to the next — instead of only from the first to the last trade.`,
   '2.9.6':
