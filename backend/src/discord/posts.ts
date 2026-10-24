@@ -43,6 +43,8 @@ const FOOTER = 'FXR Fluxora • Order flow for MotiveWave';
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
+  '2.9.9':
+    `🔧 **TPO Profile**: poor vs excess is now counted the right way — up to a few lone letters at an extreme is a **poor** high / low, more than that is an **excess** (threshold adjustable). For a day-anchored profile, turn on **Auto-Fit Profile Width**.`,
   '2.9.8':
     `🔧 **Volume Profile**: in **Split** mode each profile is now anchored to its whole day / week / month, from one separator to the next (new option **Anchor to Full Day / Week / Month**, on by default). Same for **TPO Profile** with Span Full Session.`,
   '2.9.7':
