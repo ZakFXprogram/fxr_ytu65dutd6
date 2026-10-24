@@ -85,8 +85,6 @@ export class ApiService {
   publishPost(postId: string, channelId: string): Observable<{ ok: boolean; messageId: string; edited: boolean }> { return this.http.post<{ ok: boolean; messageId: string; edited: boolean }>(this.p('bot/publish-post'), { postId, channelId }); }
   publishJar(channelId?: string): Observable<{ ok: boolean; messageId: string; version: string }> { return this.http.post<{ ok: boolean; messageId: string; version: string }>(this.p('bot/publish-jar'), { channelId }); }
   runReminders(): Observable<{ ok: boolean; sent?: number; failed?: number; error?: string }> { return this.http.post<{ ok: boolean; sent?: number; failed?: number; error?: string }>(this.p('bot/run-reminders'), {}); }
-  setupPreview(): Observable<SetupPlan> { return this.http.get<SetupPlan>(this.p('bot/setup-preview')); }
-  setupApply(): Observable<SetupReport> { return this.http.post<SetupReport>(this.p('bot/setup-apply'), {}); }
   createInvite(channelId?: string): Observable<{ ok: boolean; url: string }> { return this.http.post<{ ok: boolean; url: string }>(this.p('bot/create-invite'), { channelId }); }
 }
 
@@ -133,20 +131,3 @@ export const fmt = {
   usd: (n: number | string) => Number(n).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 2 }),
 };
 
-export interface SetupRename { id: string; kind: string; from: string; to: string; unknown: string[]; }
-export interface SetupPlan {
-  renames: SetupRename[];
-  untranslated: SetupRename[];
-  support: string | null;
-  templates: { exists: boolean; name: string; parent: string | null };
-}
-export interface SetupReport {
-  renamed: string[];
-  failed: string[];
-  untranslated: string[];
-  templatesChannel: string | null;
-  ticketPanel: string | null;
-  postsUpdated: string[];
-  jarText: boolean;
-  commands: number;
-}
