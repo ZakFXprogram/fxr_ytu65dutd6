@@ -64,9 +64,9 @@ describe('staff duration parsing', () => {
     expect(parseDuration('-5')).toBe(-1);
   });
 
-  it('labels durations in French', () => {
-    expect(durationLabel(0)).toBe('à vie');
-    expect(durationLabel(30)).toBe('1 mois');
-    expect(durationLabel(365)).toBe('1 an');
+  it('labels durations in English', () => {
+    expect(durationLabel(0)).toBe('lifetime');
+    expect(durationLabel(30)).toBe('1 month');
+    expect(durationLabel(365)).toBe('1 year');
   });
 });

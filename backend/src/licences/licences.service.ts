@@ -311,17 +311,17 @@ export function planIdForDays(plans: Plan[], days: number): string {
 
 /** A short human label for a duration in days (0 = lifetime). */
 export function durationLabel(days: number): string {
-  if (days === 0) return 'à vie';
-  if (days % 365 === 0) return `${days / 365} an${days / 365 > 1 ? 's' : ''}`;
-  if (days % 30 === 0) return `${days / 30} mois`;
-  if (days % 7 === 0) return `${days / 7} semaine${days / 7 > 1 ? 's' : ''}`;
-  return `${days} jours`;
+  if (days === 0) return 'lifetime';
+  if (days % 365 === 0) return `${days / 365} year${days / 365 > 1 ? 's' : ''}`;
+  if (days % 30 === 0) return `${days / 30} month${days / 30 > 1 ? 's' : ''}`;
+  if (days % 7 === 0) return `${days / 7} week${days / 7 > 1 ? 's' : ''}`;
+  return `${days} days`;
 }
 
 /** Parses a staff duration like "7j", "30j", "3m", "1a", "vie", "lifetime" into days (0 = lifetime, -1 = bad). */
 export function parseDuration(raw: string): number {
   const s = raw.trim().toLowerCase().replace(/\s+/g, '');
-  if (s === 'vie' || s === 'lifetime' || s === 'infini' || s === '∞') return 0;
+  if (s === 'vie' || s === 'lifetime' || s === 'life' || s === 'infini' || s === '∞') return 0;
   const m = s.match(/^(\d{1,4})(j|d|s|w|m|a|y)?$/);
   if (!m) return -1;
   const n = parseInt(m[1], 10);

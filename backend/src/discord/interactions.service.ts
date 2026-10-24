@@ -12,6 +12,7 @@ import {
 } from '../licences/licences.service';
 import { CodesService, type CodeRow } from '../codes/codes.service';
 import { RoleSyncService } from '../roles/role-sync.service';
+import { channel } from './posts';
 import { caller, ephemeral, sub, INTERACTION_PING, INTERACTION_COMMAND, REPLY_PONG, type Interaction, type Reply } from './commands';
 
 // SubjectPublicKeyInfo DER prefix for an Ed25519 raw public key (RFC 8410).
@@ -55,23 +56,23 @@ export class InteractionsService {
 
   handle(i: Interaction): Reply {
     if (i.type === INTERACTION_PING) return { type: REPLY_PONG };
-    if (i.type !== INTERACTION_COMMAND || !i.data) return ephemeral('Commande inconnue.');
+    if (i.type !== INTERACTION_COMMAND || !i.data) return ephemeral('Unknown command.');
     try {
       switch (i.data.name) {
-        case 'ma-licence':
+        case 'my-license':
           return this.myLicence(i);
-        case 'activer':
+        case 'activate':
           return this.activate(i);
-        case 'licence':
+        case 'license':
           return this.licenceCmd(i);
-        case 'cle':
+        case 'key':
           return this.keyCmd(i);
         default:
-          return ephemeral('Commande inconnue.');
+          return ephemeral('Unknown command.');
       }
     } catch (e) {
       this.log.warn(`command ${i.data.name} failed: ${(e as Error).message}`);
-      return ephemeral('⚠️ Une erreur est survenue. Réessaie dans un instant.');
+      return ephemeral('⚠️ Something went wrong. Please try again in a moment.');
     }
   }
 
@@ -80,97 +81,97 @@ export class InteractionsService {
   private myLicence(i: Interaction): Reply {
     const me = caller(i);
     const mine = this.licences.forUser(me.id).filter((l) => LicencesService.isActive(l));
-    if (mine.length === 0) return ephemeral("Tu n'as pas de licence FXR active. Utilise `/activer` avec ta clé, ou passe par le site.");
-    return ephemeral('🎟️ **Ta licence FXR**\n' + mine.map((l) => this.licenceLine(l)).join('\n'));
+    if (mine.length === 0) return ephemeral("You don't have an active FXR license. Use `/activate` with your key, or get one on the website.");
+    return ephemeral('🎟️ **Your FXR license**\n' + mine.map((l) => this.licenceLine(l)).join('\n'));
   }
 
   private activate(i: Interaction): Reply {
     const me = caller(i);
-    const key = String(sub(i).opts.get('cle') ?? '').trim();
-    if (!key) return ephemeral('Donne ta clé : `/activer cle:RDM-XXXX-XXXX-XXXX`.');
+    const key = String(sub(i).opts.get('key') ?? '').trim();
+    if (!key) return ephemeral('Enter your key: `/activate key:RDM-XXXX-XXXX-XXXX`.');
     try {
       const r = this.codes.redeem(key, me.id);
-      const until = r.days === 0 ? 'à vie' : `jusqu'au ${this.date(r.expiresAt)}`;
-      return ephemeral(`✅ Clé activée ! Ta licence FXR est active ${until}.\nTélécharge le jar dans **#📥・téléchargements**, ajoute **Study → FXR OrderFlow → Loader** dans MotiveWave et connecte-toi : les études apparaissent dans **FXR Studies**.`);
+      const until = r.days === 0 ? 'for life' : `until ${this.date(r.expiresAt)}`;
+      return ephemeral(`✅ Key activated! Your FXR license is active ${until}.\nDownload the jar in ${channel('downloads')}, add **Study → FXR OrderFlow → Loader** in MotiveWave and sign in: the studies appear under **FXR Studies**.`);
     } catch {
-      return ephemeral("❌ Cette clé n'est pas valide ou a déjà été utilisée.");
+      return ephemeral('❌ This key is not valid or has already been used.');
     }
   }
 
   // ---------------------------------------------------------------- staff: /licence
 
   private licenceCmd(i: Interaction): Reply {
-    if (!this.isStaff(i)) return ephemeral('⛔ Réservé au staff.');
+    if (!this.isStaff(i)) return ephemeral('⛔ Staff only.');
     const { name, opts } = sub(i);
     const by = `discord:${caller(i).id}`;
     switch (name) {
-      case 'donner': {
-        const user = String(opts.get('membre'));
-        const days = parseDuration(String(opts.get('duree')));
-        if (days < 0) return ephemeral('Durée invalide. Exemples : `7j`, `30j`, `3m`, `1a`, `vie`.');
+      case 'give': {
+        const user = String(opts.get('member'));
+        const days = parseDuration(String(opts.get('duration')));
+        if (days < 0) return ephemeral('Invalid duration. Examples: `7d`, `30d`, `3m`, `1y`, `lifetime`.');
         const kind = (opts.get('type') as LicenceKind) || 'premium';
         const l = this.licences.grantManual(user, days, kind, by);
         this.roles.syncSoon(user);
-        const until = l.end_ms === 0 ? 'à vie' : `jusqu'au ${this.date(l.end_ms)}`;
-        return ephemeral(`✅ Licence **${kindLabel(kind)}** (${durationLabel(days)}) donnée à <@${user}> — active ${until}.`);
+        const until = l.end_ms === 0 ? 'for life' : `until ${this.date(l.end_ms)}`;
+        return ephemeral(`✅ **${kindLabel(kind)}** license (${durationLabel(days)}) given to <@${user}> — active ${until}.`);
       }
-      case 'prolonger': {
-        const user = String(opts.get('membre'));
-        const days = parseDuration(String(opts.get('duree')));
-        if (days <= 0) return ephemeral('Donne une durée à ajouter (ex. `30j`). Pour la vie, utilise `/licence donner … vie`.');
+      case 'extend': {
+        const user = String(opts.get('member'));
+        const days = parseDuration(String(opts.get('duration')));
+        if (days <= 0) return ephemeral('Enter a duration to add (e.g. `30d`). For lifetime, use `/license give … lifetime`.');
         const active = this.licences.forUser(user).filter((l) => LicencesService.isActive(l) && l.end_ms !== 0);
-        if (active.length === 0) return ephemeral("Ce membre n'a pas de licence active à durée limitée. Utilise `/licence donner`.");
+        if (active.length === 0) return ephemeral('This member has no active time-limited license. Use `/license give`.');
         for (const l of active) this.licences.extend(l.id, days, by);
         this.roles.syncSoon(user);
-        return ephemeral(`✅ Licence de <@${user}> prolongée de ${durationLabel(days)}.`);
+        return ephemeral(`✅ <@${user}>'s license extended by ${durationLabel(days)}.`);
       }
-      case 'retirer': {
-        const user = String(opts.get('membre'));
+      case 'revoke': {
+        const user = String(opts.get('member'));
         const active = this.licences.forUser(user).filter((l) => l.status === LIC_ACTIVE);
-        if (active.length === 0) return ephemeral("Ce membre n'a pas de licence active.");
+        if (active.length === 0) return ephemeral('This member has no active license.');
         for (const l of active) this.licences.revoke(l.id, by);
         this.roles.syncSoon(user);
-        return ephemeral(`✅ Licence de <@${user}> retirée. Le rôle sera enlevé dans un instant.`);
+        return ephemeral(`✅ <@${user}>'s license revoked. The role will be removed in a moment.`);
       }
       case 'info': {
-        const user = String(opts.get('membre'));
+        const user = String(opts.get('member'));
         const all = this.licences.forUser(user);
-        if (all.length === 0) return ephemeral(`<@${user}> n'a aucune licence.`);
-        return ephemeral(`📋 **Licences de <@${user}>**\n` + all.map((l) => this.licenceLine(l, true)).join('\n'));
+        if (all.length === 0) return ephemeral(`<@${user}> has no license.`);
+        return ephemeral(`📋 **<@${user}>'s licenses**\n` + all.map((l) => this.licenceLine(l, true)).join('\n'));
       }
-      case 'liste': {
+      case 'list': {
         const rows = this.db.all<LicenceRow>(
           `SELECT * FROM licences WHERE status = ? AND (end_ms = 0 OR end_ms > ?) ORDER BY (end_ms = 0) ASC, end_ms ASC LIMIT 25`,
           LIC_ACTIVE, Date.now(),
         );
-        if (rows.length === 0) return ephemeral('Aucune licence active.');
-        return ephemeral('📆 **Licences actives** (expiration la plus proche en premier)\n' + rows.map((l) => `• <@${l.user_ref}> — ${kindLabel(l.kind)} — ${l.end_ms === 0 ? 'à vie' : this.date(l.end_ms)}`).join('\n'));
+        if (rows.length === 0) return ephemeral('No active license.');
+        return ephemeral('📆 **Active licenses** (soonest expiry first)\n' + rows.map((l) => `• <@${l.user_ref}> — ${kindLabel(l.kind)} — ${l.end_ms === 0 ? 'lifetime' : this.date(l.end_ms)}`).join('\n'));
       }
       default:
-        return ephemeral('Sous-commande inconnue.');
+        return ephemeral('Unknown subcommand.');
     }
   }
 
   // ---------------------------------------------------------------- staff: /cle
 
   private keyCmd(i: Interaction): Reply {
-    if (!this.isStaff(i)) return ephemeral('⛔ Réservé au staff.');
+    if (!this.isStaff(i)) return ephemeral('⛔ Staff only.');
     const { name, opts } = sub(i);
     const by = `discord:${caller(i).id}`;
-    if (name === 'creer') {
-      const days = parseDuration(String(opts.get('duree')));
-      if (days < 0) return ephemeral('Durée invalide. Exemples : `7j`, `30j`, `3m`, `1a`, `vie`.');
-      const count = Math.max(1, Math.min(25, Number(opts.get('nombre') ?? 1)));
+    if (name === 'create') {
+      const days = parseDuration(String(opts.get('duration')));
+      if (days < 0) return ephemeral('Invalid duration. Examples: `7d`, `30d`, `3m`, `1y`, `lifetime`.');
+      const count = Math.max(1, Math.min(25, Number(opts.get('count') ?? 1)));
       const kind = (opts.get('type') as LicenceKind) || 'premium';
       const keys = this.codes.generateByDays(days, count, '', by, kind);
-      return ephemeral(`🔑 **${count} clé(s) ${kindLabel(kind)} (${durationLabel(days)})** — à distribuer, usage unique :\n\`\`\`\n${keys.join('\n')}\n\`\`\`\nGarde-les en lieu sûr : elles ne seront plus affichées.`);
+      return ephemeral(`🔑 **${count} ${kindLabel(kind)} key(s) (${durationLabel(days)})** — single use, ready to hand out:\n\`\`\`\n${keys.join('\n')}\n\`\`\`\nKeep them safe: they won't be shown again.`);
     }
-    if (name === 'liste') {
+    if (name === 'list') {
       const rows = this.db.all<CodeRow>(`SELECT * FROM codes WHERE status = 'unused' ORDER BY created_ms DESC LIMIT 25`);
-      if (rows.length === 0) return ephemeral('Aucune clé en attente.');
-      return ephemeral(`🔑 **Clés non utilisées** (${rows.length})\n` + rows.map((c) => `• …${c.hint} — ${kindLabel(c.kind)} — ${c.days === 0 ? 'à vie' : durationLabel(c.days)}`).join('\n'));
+      if (rows.length === 0) return ephemeral('No unused key.');
+      return ephemeral(`🔑 **Unused keys** (${rows.length})\n` + rows.map((c) => `• …${c.hint} — ${kindLabel(c.kind)} — ${c.days === 0 ? 'lifetime' : durationLabel(c.days)}`).join('\n'));
     }
-    return ephemeral('Sous-commande inconnue.');
+    return ephemeral('Unknown subcommand.');
   }
 
   // ---------------------------------------------------------------- helpers
@@ -184,7 +185,7 @@ export class InteractionsService {
 
   private licenceLine(l: LicenceRow, staff = false): string {
     const status = this.licences.effectiveStatus(l);
-    const when = l.end_ms === 0 ? 'à vie' : `${status === LIC_ACTIVE ? "jusqu'au" : 'expirée le'} ${this.date(l.end_ms)}`;
+    const when = l.end_ms === 0 ? 'lifetime' : `${status === LIC_ACTIVE ? 'until' : 'expired on'} ${this.date(l.end_ms)}`;
     const tag = staff ? ` [${status}]` : '';
     return `• ${kindLabel(l.kind)} — ${when}${tag}`;
   }
@@ -195,5 +196,5 @@ export class InteractionsService {
 }
 
 function kindLabel(kind: string): string {
-  return kind === 'affilie' ? 'Affilié' : 'Premium';
+  return kind === 'affilie' ? 'Affiliate' : 'Premium';
 }

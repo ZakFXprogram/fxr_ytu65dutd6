@@ -49,9 +49,9 @@ export class RemindersService implements OnModuleInit, OnModuleDestroy {
     for (const l of due) {
       const ok = await this.bot.dm(l.user_ref, {
         content:
-          `⏰ **Ta licence FXR Fluxora expire bientôt.**\n` +
-          `Elle se termine le <t:${Math.floor(l.end_ms / 1000)}:D> (<t:${Math.floor(l.end_ms / 1000)}:R>).\n` +
-          `Renouvelle sur le site pour garder l'accès aux études. Déjà renouvelé ? Ignore ce message. 🙂`,
+          `⏰ **Your FXR Fluxora license expires soon.**\n` +
+          `It ends on <t:${Math.floor(l.end_ms / 1000)}:D> (<t:${Math.floor(l.end_ms / 1000)}:R>).\n` +
+          `Renew on the website to keep access to the studies. Already renewed? Just ignore this message. 🙂`,
       });
       this.db.run('UPDATE licences SET reminded_ms = ? WHERE id = ?', l.end_ms, l.id);
       if (ok) sent++;

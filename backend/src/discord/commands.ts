@@ -40,7 +40,7 @@ export function ephemeral(content: string): Reply {
 /** The caller's Discord id and display name, whether the command came from a guild or a DM. */
 export function caller(i: Interaction): { id: string; name: string } {
   const u = i.member?.user ?? i.user;
-  return { id: u?.id ?? '', name: u?.global_name || u?.username || 'toi' };
+  return { id: u?.id ?? '', name: u?.global_name || u?.username || 'you' };
 }
 
 /** The subcommand name and its options, for a command built as a group of subcommands. */
@@ -57,42 +57,42 @@ export function sub(i: Interaction): { name: string; opts: Map<string, string | 
 
 const kindChoices = [
   { name: 'Premium', value: 'premium' },
-  { name: 'Affilié', value: 'affilie' },
+  { name: 'Affiliate', value: 'affilie' },
 ];
 
 /** The slash-command set registered on the guild (replaces FXR Manager's commands). */
 export function commandDefinitions(): unknown[] {
-  const membre = { type: OPT_USER, name: 'membre', description: 'Le membre', required: true };
-  const duree = { type: OPT_STRING, name: 'duree', description: 'Durée : 7j, 30j, 3m, 1a, vie…', required: true, max_length: 30 };
-  const kind = { type: OPT_STRING, name: 'type', description: 'Premium (défaut) ou Affilié', choices: kindChoices };
-  const note = { type: OPT_STRING, name: 'note', description: 'Note interne (paiement, raison…)', max_length: 200 };
-  const raison = { type: OPT_STRING, name: 'raison', description: 'Raison (visible dans les logs)', max_length: 200 };
+  const member = { type: OPT_USER, name: 'member', description: 'The member', required: true };
+  const duration = { type: OPT_STRING, name: 'duration', description: 'Duration: 7d, 30d, 3m, 1y, lifetime…', required: true, max_length: 30 };
+  const kind = { type: OPT_STRING, name: 'type', description: 'Premium (default) or Affiliate', choices: kindChoices };
+  const note = { type: OPT_STRING, name: 'note', description: 'Internal note (payment, reason…)', max_length: 200 };
+  const reason = { type: OPT_STRING, name: 'reason', description: 'Reason (shown in the logs)', max_length: 200 };
 
   return [
     {
-      name: 'licence',
-      description: 'Gérer les licences FXR (staff)',
+      name: 'license',
+      description: 'Manage FXR licenses (staff)',
       options: [
-        { type: OPT_SUB, name: 'donner', description: 'Donner (ou prolonger) une licence à un membre', options: [membre, duree, kind, note] },
-        { type: OPT_SUB, name: 'prolonger', description: "Prolonger la licence active d'un membre", options: [membre, duree] },
-        { type: OPT_SUB, name: 'retirer', description: "Retirer la licence d'un membre maintenant", options: [membre, raison] },
-        { type: OPT_SUB, name: 'info', description: "Voir les licences d'un membre", options: [membre] },
-        { type: OPT_SUB, name: 'liste', description: 'Licences actives, de la plus proche expiration à la plus lointaine' },
+        { type: OPT_SUB, name: 'give', description: 'Give (or extend) a license to a member', options: [member, duration, kind, note] },
+        { type: OPT_SUB, name: 'extend', description: "Extend a member's active license", options: [member, duration] },
+        { type: OPT_SUB, name: 'revoke', description: "Revoke a member's license now", options: [member, reason] },
+        { type: OPT_SUB, name: 'info', description: "Show a member's licenses", options: [member] },
+        { type: OPT_SUB, name: 'list', description: 'Active licenses, soonest expiry first' },
       ],
     },
     {
-      name: 'cle',
-      description: 'Clés de licence à distribuer (staff)',
+      name: 'key',
+      description: 'License keys to hand out (staff)',
       options: [
-        { type: OPT_SUB, name: 'creer', description: 'Créer des clés de licence', options: [duree, { type: OPT_INT, name: 'nombre', description: 'Combien de clés (1 à 25)', min_value: 1, max_value: 25 }, kind, note] },
-        { type: OPT_SUB, name: 'liste', description: 'Clés pas encore utilisées' },
+        { type: OPT_SUB, name: 'create', description: 'Create license keys', options: [duration, { type: OPT_INT, name: 'count', description: 'How many keys (1 to 25)', min_value: 1, max_value: 25 }, kind, note] },
+        { type: OPT_SUB, name: 'list', description: 'Keys not used yet' },
       ],
     },
     {
-      name: 'activer',
-      description: 'Activer ta licence FXR avec une clé',
-      options: [{ type: OPT_STRING, name: 'cle', description: 'Ta clé (RDM-XXXX-XXXX-XXXX)', required: true, max_length: 40 }],
+      name: 'activate',
+      description: 'Activate your FXR license with a key',
+      options: [{ type: OPT_STRING, name: 'key', description: 'Your key (RDM-XXXX-XXXX-XXXX)', required: true, max_length: 40 }],
     },
-    { name: 'ma-licence', description: 'Voir l’état de ta licence FXR' },
+    { name: 'my-license', description: 'Check your FXR license' },
   ];
 }

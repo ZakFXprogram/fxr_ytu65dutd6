@@ -1,4 +1,4 @@
-/** Ready-made channel messages the bot can publish or update (install guides, rules, FAQ, launch). */
+/** Ready-made channel messages the bot can publish or update (install guides, rules, FAQ, templates, updates). */
 
 export interface EmbedField {
   name: string;
@@ -19,43 +19,65 @@ const COL_BLUE = 4754090;
 const COL_GREY = 6055536;
 const COL_AMBER = 14725184;
 const COL_PURPLE = 8080895;
+const COL_GREEN = 3066993;
+
+/** The server's channel names, as the posts and bot replies mention them. */
+export const CHANNELS: Record<string, string> = {
+  downloads: '📥・downloads',
+  install: '🛠️・installation',
+  support: '🆘・support',
+  updates: '🆕・updates',
+  rules: '📜・rules',
+  faq: '❓・faq',
+  trading: '📈・trading',
+  setups: '📊・setups',
+  templates: '🧩・templates',
+};
+
+/** A channel reference for a message, e.g. **#📥・downloads**. */
+export function channel(key: keyof typeof CHANNELS | string): string {
+  return `**#${CHANNELS[key] ?? key}**`;
+}
+
+const FOOTER = 'FXR Fluxora • Order flow for MotiveWave';
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
   '2.9.1':
-    `🔧 **CVD · Stops & Icebergs** : le HUD affiche **CVD** (au lieu de « Volume ») et les barres partent d'un **point milieu** : ` +
-    `vers la droite quand la valeur est positive, vers la gauche quand elle est négative.`,
+    `🔧 **CVD · Stops & Icebergs**: the HUD now reads **CVD** (instead of "Volume") and its bars start from a **middle mark**: ` +
+    `they grow right when the value is positive, left when it is negative.`,
   '2.9.0':
-    `🆕 **Nouvelle étude : CVD · Stops & Icebergs** (panneau sous le graphique, façon Bookmap) — le delta cumulé, ` +
-    `le cumul des **stops déclenchés** (cascades d'ordres agressifs dans la même milliseconde après une cassure) et le cumul des ` +
-    `**icebergs** (un niveau qui encaisse plus que ce qu'il affiche et tient). HUD en direct, gros événements marqués, alertes. ` +
+    `🆕 **New study: CVD · Stops & Icebergs** (a pane under the chart, Bookmap style): the cumulative delta, ` +
+    `the running total of **triggered stops** (aggressive orders cascading in the same millisecond after a level breaks) and of ` +
+    `**icebergs** (a level that absorbs more than it shows and holds). Live HUD, large events marked, alerts. ` +
     `Menu **Study → FXR Studies → CVD · Stops & Icebergs**.`,
   '2.8.0':
-    `🆕 **Deux nouvelles études** : **Volume Profile** (composite / par jour, semaine, mois / zone visible ; RTH, session complète, ` +
-    `overnight ou ETH + RTH ; styles Bars, Heatmap, Outline, Holo ; volume gris + delta bleu / rouge ; value area, POC jusqu'au retest, HVN / LVN) ` +
-    `et **TPO Profile** (lettres par période façon Sierra, volume + delta attachés, value area, singles, poor / excess, IB + extensions, OR, totaux). ` +
-    `L'ancien **Market Profile** est retiré : remplace-le par **TPO Profile** sur tes graphiques.\n\n` +
-    `🔧 **Correctif** : les études ne captent plus les clics sur tout le graphique (ex. Daily Market Info ouvrait ses paramètres à chaque clic) ; seul ce qu'elles dessinent réagit à la souris.`,
-  '2.7.0':
-    `🆕 **Nouvelle étude : Volume Profile** — composite, par jour / semaine / mois ou zone visible ; RTH, session complète, ` +
-    `overnight ou ETH + RTH séparés ; styles Bars, Heatmap, Outline, Holo… ; volume gris + delta bleu / rouge, bid / ask ou ` +
-    `ETH / RTH ; value area, POC prolongé jusqu'au retest, HVN / LVN, niveaux exportés et signaux. Menu **Study → FXR Studies → Volume Profile**.`,
-  '2.6.1':
-    `🆕 **Nouvelle étude : Market Profile** — lettres TPO (A, B, C…), volume profile en gris avec le profil de delta ` +
-    `(bleu acheteurs / rouge vendeurs) par-dessus, ` +
-    `value area, POC, TPOC et single prints. Session RTH / Globex / 24 h / horaires perso, profils journaliers, ` +
-    `hebdo, mensuels ou composites. Menu **Study → FXR Studies → Market Profile**.`,
+    `🆕 **Two new studies**: **Volume Profile** (composite / per day, week, month / visible range; RTH, full session, ` +
+    `overnight or ETH + RTH; Bars, Heatmap, Outline, Holo styles; grey volume + blue / red delta; value area, POC until retested, HVN / LVN) ` +
+    `and **TPO Profile** (Sierra-style letters per period, attached volume + delta, value area, singles, poor / excess, IB + extensions, OR, totals). ` +
+    `The old **Market Profile** is retired: replace it with **TPO Profile** on your charts.\n\n` +
+    `🔧 **Fix**: studies no longer catch clicks on the whole chart (Daily Market Info opened its settings on every click); only what they draw reacts to the mouse.`,
 };
 
 /** The jar-release message (the file itself is attached separately). */
 export function jarReleaseText(version: string): string {
   const notes = RELEASE_NOTES[version];
   return (
-    `📥 **FXR OrderFlow ${version}** pour MotiveWave\n\n` +
+    `📥 **FXR OrderFlow ${version}** for MotiveWave\n\n` +
     (notes ? `${notes}\n\n` : '') +
-    `Le fichier **FXROrderFlow.jar** est en pièce jointe. Licence active requise (rôle **Premium** ou **Affilié**) — vérifie avec \`/ma-licence\`.\n` +
-    `Installation : suis **#🛠️・installation** (Windows et macOS). MotiveWave **fermé** avant de remplacer le jar.`
+    `**FXROrderFlow.jar** is attached. An active license is required (**Premium** or **Affiliate** role): check with \`/my-license\`.\n` +
+    `Install: follow ${channel('install')} (Windows and macOS). **Close MotiveWave** before replacing the jar.`
   );
+}
+
+const TROUBLE =
+  `**🛠 Trouble?**\n` +
+  `• **🔴 Disconnected** badge / padlock → type \`/my-license\`, otherwise open a ticket in ${'#'}SUPPORT\n` +
+  `• Wrong Discord account → open the Loader's settings → **OK** to try again\n` +
+  `• No FXR Studies menu → check the Loader is connected (green badge), then restart MotiveWave once\n`;
+
+function trouble(last: string): string {
+  return TROUBLE.replace(`#SUPPORT`, channel('support')) + last;
 }
 
 export const POSTS: Post[] = [
@@ -63,130 +85,134 @@ export const POSTS: Post[] = [
     id: 'install_windows',
     title: '🪟 Installation — Windows',
     color: COL_BLUE,
-    footer: 'FXR Fluxora • Order Flow pour MotiveWave',
+    footer: FOOTER,
     description:
-      `**Avant de commencer**\n` +
-      `• Une licence active (rôle **Premium** ou **Affilié**). Vérifie avec \`/ma-licence\`\n` +
-      `• MotiveWave à jour\n\n` +
-      `**1 · Télécharge le jar**\nRécupère \`FXROrderFlow.jar\` dans **#📥・téléchargements**.\n\n` +
-      `**2 · Ferme complètement MotiveWave**\nMenu **File → Exit**. Le jar ne se remplace jamais avec MotiveWave ouvert.\n\n` +
-      `**3 · Ouvre le dossier des extensions**\nTouche **Windows + R**, colle la ligne ci-dessous, puis **Entrée** :\n` +
+      `**Before you start**\n` +
+      `• An active license (**Premium** or **Affiliate** role). Check with \`/my-license\`\n` +
+      `• An up-to-date MotiveWave\n\n` +
+      `**1 · Download the jar**\nGet \`FXROrderFlow.jar\` in ${channel('downloads')}.\n\n` +
+      `**2 · Close MotiveWave completely**\nMenu **File → Exit**. Never replace the jar while MotiveWave is open.\n\n` +
+      `**3 · Open the extensions folder**\nPress **Windows + R**, paste the line below, then **Enter**:\n` +
       '```\n%USERPROFILE%\\MotiveWave Extensions\n```' +
-      `S'il n'existe pas, crée-le avec ce nom exact dans \`C:\\Users\\<ton nom>\\\`.\n\n` +
-      `**4 · Copie le jar dans ce dossier**\nRemplace l'ancien si Windows le demande. Il ne doit y avoir **qu'un seul** \`FXROrderFlow.jar\`.\n\n` +
-      `**5 · Relance MotiveWave et lance le Loader**\nMenu **Study → FXR OrderFlow → Loader**, ajoute-le à un graphique. Une page Discord s'ouvre → clique **Autoriser**. Un badge **🟢 Connected** apparaît en bas à gauche.\n\n` +
-      `**6 · Les études**\nUne fois connecté, elles arrivent dans le menu **Study → FXR Studies** (Big Trades, Delta Heatmap, Leg to Leg…). Si le menu ne sort pas tout de suite, relance MotiveWave une fois.\n\n` +
-      `**🔁 Mise à jour**\nMotiveWave fermé, remplace le jar par le nouveau.\n\n` +
-      `**🛠 Un souci ?**\n` +
-      `• Badge **🔴 Disconnected** / cadenas → tape \`/ma-licence\`, sinon **#🆘・support**\n` +
-      `• Mauvais compte Discord → ouvre les paramètres du Loader → **OK** pour réessayer\n` +
-      `• Menu FXR Studies absent → vérifie que le Loader est connecté (badge vert), puis relance MotiveWave\n` +
-      `• Toujours bloqué → **#🆘・support** avec une capture`,
+      `If it does not exist, create it with this exact name in \`C:\\Users\\<your name>\\\`.\n\n` +
+      `**4 · Copy the jar into that folder**\nReplace the old one if Windows asks. There must be **only one** \`FXROrderFlow.jar\`.\n\n` +
+      `**5 · Restart MotiveWave and add the Loader**\nMenu **Study → FXR OrderFlow → Loader**, add it to a chart. A sign-in page opens → sign in with Discord. A **🟢 Connected** badge appears at the bottom left.\n\n` +
+      `**6 · The studies**\nOnce connected, they appear in **Study → FXR Studies** (Big Trades, Volume Profile, TPO Profile…). If the menu does not show right away, restart MotiveWave once.\n\n` +
+      `**🔁 Updating**\nWith MotiveWave closed, replace the jar with the new one.\n\n` +
+      trouble(`• Still stuck → open a ticket in ${channel('support')} with a screenshot`),
   },
   {
     id: 'install_mac',
     title: '🍎 Installation — macOS',
     color: COL_GREY,
-    footer: 'FXR Fluxora • Order Flow pour MotiveWave',
+    footer: FOOTER,
     description:
-      `**Avant de commencer**\n` +
-      `• Une licence active (rôle **Premium** ou **Affilié**). Vérifie avec \`/ma-licence\`\n` +
-      `• MotiveWave à jour (même jar que sur Windows)\n\n` +
-      `**1 · Télécharge le jar**\nRécupère \`FXROrderFlow.jar\` dans **#📥・téléchargements**. Ne double-clique pas dessus : ce n'est pas une application.\n\n` +
-      `**2 · Quitte complètement MotiveWave**\n**Cmd + Q** (fermer la fenêtre ne suffit pas).\n\n` +
-      `**3 · Ouvre le dossier des extensions**\nDans le Finder : **Cmd + Maj + G**, colle la ligne ci-dessous, puis **Entrée** :\n` +
+      `**Before you start**\n` +
+      `• An active license (**Premium** or **Affiliate** role). Check with \`/my-license\`\n` +
+      `• An up-to-date MotiveWave (same jar as on Windows)\n\n` +
+      `**1 · Download the jar**\nGet \`FXROrderFlow.jar\` in ${channel('downloads')}. Don't double-click it: it is not an app.\n\n` +
+      `**2 · Quit MotiveWave completely**\n**Cmd + Q** (closing the window is not enough).\n\n` +
+      `**3 · Open the extensions folder**\nIn Finder: **Cmd + Shift + G**, paste the line below, then **Enter**:\n` +
       '```\n~/MotiveWave Extensions\n```' +
-      `S'il n'existe pas, crée-le avec ce nom exact dans ton dossier personnel.\n\n` +
-      `**4 · Glisse le jar dans ce dossier**\nRemplace l'ancien si le Mac le demande. Il ne doit y avoir **qu'un seul** \`FXROrderFlow.jar\`.\n\n` +
-      `**5 · Relance MotiveWave et lance le Loader**\nMenu **Study → FXR OrderFlow → Loader**, ajoute-le à un graphique. Safari ou Chrome s'ouvre sur Discord → clique **Autoriser**. Un badge **🟢 Connected** apparaît en bas à gauche.\n\n` +
-      `**6 · Les études**\nUne fois connecté, elles arrivent dans le menu **Study → FXR Studies**. Si le menu ne sort pas tout de suite, relance MotiveWave une fois.\n\n` +
-      `**🔁 Mise à jour**\nMotiveWave quitté, remplace le jar par le nouveau.\n\n` +
-      `**🛠 Un souci ?**\n` +
-      `• Badge **🔴 Disconnected** / cadenas → tape \`/ma-licence\`, sinon **#🆘・support**\n` +
-      `• Mauvais compte Discord → ouvre les paramètres du Loader → **OK** pour réessayer\n` +
-      `• Menu FXR Studies absent → vérifie que le Loader est connecté (badge vert), puis relance MotiveWave\n` +
-      `• Rien à autoriser dans Réglages → Confidentialité : le jar est chargé par MotiveWave`,
+      `If it does not exist, create it with this exact name in your home folder.\n\n` +
+      `**4 · Drag the jar into that folder**\nReplace the old one if macOS asks. There must be **only one** \`FXROrderFlow.jar\`.\n\n` +
+      `**5 · Restart MotiveWave and add the Loader**\nMenu **Study → FXR OrderFlow → Loader**, add it to a chart. Your browser opens the sign-in page → sign in with Discord. A **🟢 Connected** badge appears at the bottom left.\n\n` +
+      `**6 · The studies**\nOnce connected, they appear in **Study → FXR Studies**. If the menu does not show right away, restart MotiveWave once.\n\n` +
+      `**🔁 Updating**\nWith MotiveWave quit, replace the jar with the new one.\n\n` +
+      trouble(`• Nothing to allow in System Settings → Privacy: MotiveWave loads the jar`),
   },
   {
     id: 'rules',
-    title: '📜 Règlement — FXR Fluxora',
+    title: '📜 Rules — FXR Fluxora',
     color: COL_PURPLE,
-    footer: 'En restant sur le serveur, tu acceptes ce règlement • FXR Fluxora',
-    description: 'Bienvenue sur **FXR Fluxora**, la communauté order flow pour MotiveWave. Quelques règles simples pour que ça reste propre pour tout le monde.',
+    footer: 'By staying on the server you accept these rules • FXR Fluxora',
+    description: 'Welcome to **FXR Fluxora**, the order flow community for MotiveWave. A few simple rules to keep it clean for everyone.',
     fields: [
-      { name: '1 · Respect', value: "Pas d'insultes, de harcèlement, de discrimination ni de clash personnel. On débat des idées et des trades, pas des personnes." },
-      { name: '2 · Pas de spam ni de pub', value: "Pas de flood, de liens d'affiliation, de promo d'autres groupes ou de MP non sollicités. Les partenariats passent par le staff." },
-      { name: '3 · Licence personnelle', value: 'Une licence = un compte Discord. **Partager, revendre ou redistribuer le jar FXR, ta licence ou ton compte est interdit** et entraîne le retrait immédiat de la licence, sans remboursement.' },
-      { name: '4 · Pas de piratage', value: 'Toute tentative de contourner la vérification de licence, de décompiler ou de modifier le jar entraîne un bannissement définitif.' },
-      { name: '5 · Le bon salon', value: "Installation → **#🛠️・installation** puis **#🆘・support**. Analyses et idées → **#📈・trading**. Captures → **#📊・setups**." },
-      { name: '6 · Pas de conseil financier', value: "Rien ici n'est un conseil en investissement. Les outils FXR aident à lire le flux d'ordres ; chaque décision de trading t'appartient." },
-      { name: '⚠️ Risques', value: 'Le trading de futures et de produits à effet de levier comporte un risque élevé de perte en capital. Ne trade que de l\'argent que tu peux te permettre de perdre.' },
-      { name: 'Sanctions', value: 'Avertissement → exclusion temporaire → bannissement, selon la gravité. Le staff a le dernier mot. Un souci avec un membre ? Signale-le à un **@Support** en privé.' },
+      { name: '1 · Respect', value: 'No insults, harassment, discrimination or personal fights. Debate ideas and trades, not people.' },
+      { name: '2 · No spam or ads', value: 'No flooding, affiliate links, promotion of other groups or unsolicited DMs. Partnerships go through the staff.' },
+      { name: '3 · Personal license', value: 'One license = one Discord account. **Sharing, reselling or redistributing the FXR jar, your license or your account is forbidden** and leads to the license being removed immediately, with no refund.' },
+      { name: '4 · No cracking', value: 'Any attempt to bypass the license check, decompile or modify the jar leads to a permanent ban.' },
+      { name: '5 · The right channel', value: `Install → ${channel('install')}, then a ticket in ${channel('support')}. Analysis and ideas → ${channel('trading')}. Screenshots → ${channel('setups')}. Chart templates → ${channel('templates')}.` },
+      { name: '6 · No financial advice', value: 'Nothing here is investment advice. FXR tools help you read order flow; every trading decision is yours.' },
+      { name: '⚠️ Risk', value: 'Trading futures and leveraged products carries a high risk of losing money. Only trade money you can afford to lose.' },
+      { name: 'Sanctions', value: 'Warning → timeout → ban, depending on severity. The staff has the final word. A problem with a member? Report it to the staff in a ticket.' },
     ],
   },
   {
     id: 'faq',
     title: '❓ FAQ — FXR Fluxora',
     color: COL_BLUE,
-    footer: "Ta question n'est pas là ? Pose-la dans #🆘・support • FXR Fluxora",
-    description: 'Les questions qui reviennent le plus souvent.',
+    footer: 'Your question is not here? Open a ticket in #🆘・support • FXR Fluxora',
+    description: 'The questions we get the most.',
     fields: [
-      { name: "C'est quoi FXR Fluxora ?", value: "Une suite d'études **order flow** pour MotiveWave : Big Trades, Deep Trades, CVD · Stops & Icebergs, Delta Bars, Delta Heatmap, Absorption & Imbalances, Leg to Leg, Volume Profile, TPO Profile et Daily Market Info." },
-      { name: 'Sur quelle plateforme ?', value: '**MotiveWave** (version récente), sur **Windows** et **macOS**. Le même `FXROrderFlow.jar` sert pour les deux.' },
-      { name: 'Quelles données de marché ?', value: 'Un flux **tick par tick** avec le côté agresseur (bid/ask), ex. Rithmic ou CQG sur les futures CME. Sans données tick, les études order flow restent vides.' },
-      { name: 'Comment obtenir une licence ?', value: "Via le **site** (paiement), ou une **clé** donnée par le staff : tape `/activer` sur le serveur et colle-la. Le rôle arrive instantanément." },
-      { name: 'Comment voir ma licence ?', value: 'Tape `/ma-licence` : type, statut et date de fin. Le bot t\'envoie aussi un **message privé avant l\'expiration**.' },
-      { name: 'Comment ça marche dans MotiveWave ?', value: "Ajoute **Study → FXR OrderFlow → Loader** : il vérifie ton rôle via Discord (badge **Connected** en bas à gauche), puis le menu **FXR Studies** apparaît avec toutes les études. On ne reçoit **jamais** ton mot de passe." },
-      { name: 'Badge Disconnected / cadenas', value: 'Ta licence a expiré ou tu es sur un autre compte Discord. Vérifie avec `/ma-licence`. Pour changer de compte : paramètres du Loader → **OK**.' },
-      { name: 'Ça marche sans internet ?', value: "Oui, jusqu'à **72 h** après la dernière vérification réussie. Ensuite il faut une connexion pour revérifier." },
-      { name: 'Plusieurs PC ?', value: 'Oui, sur tes propres machines avec **ton** compte Discord. Le partage de compte ou de licence est interdit.' },
-      { name: 'Comment mettre à jour ?', value: 'Quand une version sort (**#🆕・mises-à-jour**), télécharge le nouveau jar et remplace l\'ancien, MotiveWave fermé. Tes réglages sont conservés.' },
-      { name: "Besoin d'aide ?", value: 'Installation : **#🛠️・installation**. Problème : **#🆘・support** avec une capture et ta version de MotiveWave.' },
+      { name: 'What is FXR Fluxora?', value: 'A suite of **order flow** studies for MotiveWave: Big Trades, Deep Trades, CVD · Stops & Icebergs, Delta Bars, Delta Heatmap, Absorption & Imbalances, Leg to Leg, Volume Profile, TPO Profile and Daily Market Info.' },
+      { name: 'Which platform?', value: '**MotiveWave** (recent version), on **Windows** and **macOS**. The same `FXROrderFlow.jar` works on both.' },
+      { name: 'Which market data?', value: 'A **tick-by-tick** feed with the aggressor side (bid/ask), e.g. Rithmic or CQG on CME futures. Without tick data the order flow studies stay empty.' },
+      { name: 'How do I get a license?', value: 'On the **website** (payment), or with a **key** from the staff: type `/activate` on the server and paste it. The role is given instantly.' },
+      { name: 'How do I check my license?', value: 'Type `/my-license`: type, status and end date. The bot also sends you a **private message before it expires**.' },
+      { name: 'How does it work in MotiveWave?', value: 'Add **Study → FXR OrderFlow → Loader**: it checks your role through Discord (**Connected** badge at the bottom left), then the **FXR Studies** menu appears with every study. We **never** get your password.' },
+      { name: 'Disconnected badge / padlock', value: 'Your license has expired or you are on another Discord account. Check with `/my-license`. To switch accounts: Loader settings → **OK**.' },
+      { name: 'Does it work offline?', value: 'Yes, for up to **72 h** after the last successful check. After that it needs a connection to check again.' },
+      { name: 'Several computers?', value: 'Yes, on your own machines with **your** Discord account. Sharing an account or a license is forbidden.' },
+      { name: 'How do I update?', value: `When a version is out (${channel('updates')}), download the new jar and replace the old one with MotiveWave closed. Your settings are kept.` },
+      { name: 'Need help?', value: `Install: ${channel('install')}. A problem: open a ticket in ${channel('support')} with a screenshot and your MotiveWave version.` },
+    ],
+  },
+  {
+    id: 'templates',
+    title: '🧩 Chart templates — share yours',
+    color: COL_GREEN,
+    footer: FOOTER,
+    description: 'Share your MotiveWave chart templates and FXR study settings with the other **Premium** members.',
+    fields: [
+      { name: 'How to share', value: '1. In MotiveWave, save your chart as a template (**right-click the chart → Template → Save As**)\n2. Find the file in your **MotiveWave Extensions / templates** folder\n3. Post it here with a **screenshot**, the **instrument** and **timeframe**, and which **FXR studies** it uses' },
+      { name: 'How to import one', value: 'Download the file, put it in your templates folder, then **right-click the chart → Template → Load**.' },
+      { name: 'Rules', value: 'Only your own work. No jar, no license, no paid material from others. Keep it about chart setups.' },
     ],
   },
   {
     id: 'launch',
-    title: '🚀 FXR Fluxora est lancé !',
+    title: '🚀 FXR Fluxora is live!',
     color: COL_AMBER,
-    footer: 'FXR Fluxora • Order Flow pour MotiveWave',
-    description: "La suite **FXR Fluxora** arrive sur MotiveWave : des outils order flow pensés pour lire **qui agresse le marché, où, et avec quelle force**, directement sur ton graphique.",
+    footer: FOOTER,
+    description: 'The **FXR Fluxora** suite is out for MotiveWave: order flow tools built to read **who is hitting the market, where, and how hard**, right on your chart.',
     fields: [
-      { name: '🔵 Big Trades', value: "Les gros ordres agressifs en bulles, filtre manuel ou automatique et paliers d'alerte.", inline: true },
-      { name: '📊 Delta Bars', value: 'Le delta acheteurs / vendeurs de chaque bougie, divergences et extrêmes.', inline: true },
-      { name: '🔥 Delta Heatmap', value: 'La pression acheteuse et vendeuse prix par prix, en carte de chaleur.', inline: true },
-      { name: '🧱 Absorption & Imbalances', value: "Les zones où un camp absorbe l'autre et les déséquilibres du carnet.", inline: true },
-      { name: '🦵 Leg to Leg', value: 'Profils volume et delta de chaque jambe de swing, nœuds HVN / LVN.', inline: true },
-      { name: '🗓️ Daily Market Info', value: 'OHLC, value area, OR / IB, VWAP, opens clés, gaps et calendrier des news.', inline: true },
-      { name: '✅ Pour commencer', value: "1. Obtiens ta licence sur le **site**, ou active ta clé avec `/activer`\n2. Télécharge le jar dans **#📥・téléchargements**\n3. Suis **#🛠️・installation**\n4. Partage tes setups dans **#📊・setups**" },
-      { name: '📌 À lire', value: '**#📜・règles** et **#❓・faq**. Bienvenue à tous, et bons trades ! 🎯' },
+      { name: '🔵 Big Trades', value: 'Large aggressive orders as bubbles, manual or automatic filter and alert tiers.', inline: true },
+      { name: '📊 Delta Bars', value: 'Buyer / seller delta of every candle, divergences and extremes.', inline: true },
+      { name: '🔥 Delta Heatmap', value: 'Buying and selling pressure price by price, as a heatmap.', inline: true },
+      { name: '🧱 Absorption & Imbalances', value: 'Where one side absorbs the other, and order book imbalances.', inline: true },
+      { name: '🦵 Leg to Leg', value: 'Volume and delta profiles of every swing leg, HVN / LVN nodes.', inline: true },
+      { name: '🗓️ Daily Market Info', value: 'OHLC, value area, OR / IB, VWAP, key opens, gaps and a news calendar.', inline: true },
+      { name: '✅ Getting started', value: `1. Get your license on the **website**, or activate your key with \`/activate\`\n2. Download the jar in ${channel('downloads')}\n3. Follow ${channel('install')}\n4. Share your setups in ${channel('setups')}` },
+      { name: '📌 Read first', value: `${channel('rules')} and ${channel('faq')}. Welcome, and good trading! 🎯` },
     ],
   },
   {
     id: 'update_2_9_0',
-    title: '🆕 Mise à jour 2.9.0 — CVD · Stops & Icebergs',
+    title: '🆕 Update 2.9 — CVD · Stops & Icebergs',
     color: COL_PURPLE,
-    footer: 'FXR Fluxora • Order Flow pour MotiveWave',
-    description: "Nouvelle étude en panneau sous le graphique, pour voir **en direct** ce que le carnet cache.",
+    footer: FOOTER,
+    description: 'A new study in a pane under the chart, to see **live** what the order book hides.',
     fields: [
-      { name: '🔵 CVD', value: 'Le delta cumulé, remis à zéro à chaque séance RTH, chaque jour, à l\'heure de ton choix, ou jamais.', inline: true },
-      { name: '🟠 Stops', value: 'Le cumul des **stops déclenchés** : plusieurs ordres agressifs dans la même milliseconde juste après une cassure. Achat +, vente -.', inline: true },
-      { name: '🟣 Icebergs', value: 'Le cumul des **ordres cachés** : un niveau qui encaisse plus que ce qu\'il affiche et qui tient. Bid caché +, offre cachée -.', inline: true },
-      { name: '📟 HUD & alertes', value: 'Valeurs et barres en direct en haut à droite (point milieu : à droite si positif, à gauche si négatif), gros événements marqués, alertes sur les grosses cascades et les gros icebergs, valeurs exportées.' },
-      { name: '📥 Installer', value: "1. Télécharge le nouveau **FXROrderFlow.jar** dans **#📥・téléchargements**\n2. **Ferme MotiveWave**, remplace l'ancien jar\n3. Relance, lance le **Loader** → **Study → FXR Studies → CVD · Stops & Icebergs**\n\nDonnées tick par tick avec bid / ask nécessaires (Rithmic recommandé)." },
+      { name: '🔵 CVD', value: 'The cumulative delta, reset every RTH session, every day, at the time you choose, or never.', inline: true },
+      { name: '🟠 Stops', value: 'The running total of **triggered stops**: several aggressive orders in the same millisecond right after a level breaks. Buy +, sell -.', inline: true },
+      { name: '🟣 Icebergs', value: 'The running total of **hidden orders**: a level that absorbs more than it shows and holds. Hidden bid +, hidden offer -.', inline: true },
+      { name: '📟 HUD & alerts', value: 'Live values and bars at the top right (middle mark: right when positive, left when negative), large events marked, alerts on big stop cascades and big icebergs, exported values.' },
+      { name: '📥 Install', value: `1. Download the new **FXROrderFlow.jar** in ${channel('downloads')}\n2. **Close MotiveWave**, replace the old jar\n3. Restart, add the **Loader** → **Study → FXR Studies → CVD · Stops & Icebergs**\n\nNeeds tick-by-tick data with bid / ask (Rithmic recommended).` },
     ],
   },
   {
     id: 'update_2_8_0',
-    title: '🆕 Mise à jour 2.8.0 — Volume Profile + TPO Profile',
+    title: '🆕 Update 2.8 — Volume Profile + TPO Profile',
     color: COL_PURPLE,
-    footer: 'FXR Fluxora • Order Flow pour MotiveWave',
-    description: "Deux nouvelles études construites sur chaque tick avec le côté acheteur / vendeur. L'ancien **Market Profile** est retiré et remplacé par **TPO Profile**.",
+    footer: FOOTER,
+    description: 'Two new studies built on every tick with the buy / sell side. The old **Market Profile** is retired and replaced by **TPO Profile**.',
     fields: [
-      { name: '📊 Volume Profile', value: '**Composite**, **Split** (jour / semaine / mois) ou **Visible Range**. RTH, session complète, overnight ou ETH + RTH. Styles Bars, Heatmap, Outline, **Holo**… Volume **gris + delta** bleu / rouge, bid / ask, ETH / RTH.' },
-      { name: '🔤 TPO Profile', value: 'Lettres par période façon **Sierra** (ou blocs), volume + delta attachés, TPO POC / VP POC, value area, midpoint, **singles prolongés jusqu\'au remplissage**, **poor / excess** high et low, **IB + extensions**, opening range, bloc de totaux.' },
-      { name: '🎯 Niveaux', value: 'Lignes projetées (prolongées jusqu\'au retest), étiquettes avec prix, tags sur le bord droit, valeurs exportées et signaux au contact des niveaux.' },
-      { name: '🔧 Correctif', value: 'Les études ne captent plus les clics sur tout le graphique : avant, Daily Market Info (et d\'autres) ouvrait ses paramètres dès qu\'on cliquait n\'importe où. Seul ce qu\'elles dessinent (tableau, profils) réagit à la souris.' },
-      { name: '📥 Installer', value: "1. Télécharge le nouveau **FXROrderFlow.jar** dans **#📥・téléchargements**\n2. **Ferme MotiveWave**, remplace l'ancien jar\n3. Relance, lance le **Loader** → **Study → FXR Studies → Volume Profile / TPO Profile**\n4. Si tu avais le Market Profile sur un graphique, retire-le et ajoute **TPO Profile**" },
+      { name: '📊 Volume Profile', value: '**Composite**, **Split** (day / week / month) or **Visible Range**. RTH, full session, overnight or ETH + RTH. Bars, Heatmap, Outline, **Holo** styles… **Grey volume + blue / red delta**, bid / ask, ETH / RTH.' },
+      { name: '🔤 TPO Profile', value: '**Sierra**-style letters per period (or blocks), attached volume + delta, TPO POC / VP POC, value area, midpoint, **singles extended until filled**, **poor / excess** highs and lows, **IB + extensions**, opening range, totals block.' },
+      { name: '🎯 Levels', value: 'Projected lines (extended until retested), labels with prices, tags on the right edge, exported values and touch signals.' },
+      { name: '🔧 Fix', value: 'Studies no longer catch clicks on the whole chart: Daily Market Info (and others) used to open their settings on any click. Only what they draw (table, profiles) reacts to the mouse.' },
+      { name: '📥 Install', value: `1. Download the new **FXROrderFlow.jar** in ${channel('downloads')}\n2. **Close MotiveWave**, replace the old jar\n3. Restart, add the **Loader** → **Study → FXR Studies → Volume Profile / TPO Profile**\n4. If you had the Market Profile on a chart, remove it and add **TPO Profile**` },
     ],
   },
 ];
