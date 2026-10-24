@@ -43,6 +43,8 @@ const FOOTER = 'FXR Fluxora • Order flow for MotiveWave';
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
+  '2.9.2':
+    `🎨 The default colour theme is now called **BlueWave** (blue / grey). Same colours as before; charts that used it switch over on their own.`,
   '2.9.1':
     `🔧 **CVD · Stops & Icebergs**: the HUD now reads **CVD** (instead of "Volume") and its bars start from a **middle mark**: ` +
     `they grow right when the value is positive, left when it is negative.`,
