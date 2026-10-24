@@ -43,6 +43,8 @@ const FOOTER = 'FXR Fluxora • Order flow for MotiveWave';
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
+  '2.9.4':
+    `✨ Nicer first launch: adding the **Loader** now shows the **FXR loading screen** (the logo and a progress bar) while your licence is checked, then it fades out and the studies unlock. Still one single jar, no restart.`,
   '2.9.3':
     `📦 **One single jar.** FXR OrderFlow now ships as one file: the studies appear in **Study → FXR Studies** as soon as you install it (locked until your licence is confirmed), with **no second jar and no restart** needed. Add the **Loader** once to sign in and they unlock. Internally the code is now scrambled to make copying far harder.`,
   '2.9.2':
