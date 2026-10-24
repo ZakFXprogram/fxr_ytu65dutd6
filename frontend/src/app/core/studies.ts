@@ -74,6 +74,13 @@ export const STUDIES: StudyInfo[] = [
     data: 'Tick-by-tick data with bid/ask side (bars fill in where ticks are missing).',
   },
   {
+    slug: 'sp-volume', name: 'SP Volume', tag: 'Profiles', img: 'sp_volume',
+    blurb: 'Up to three volume profiles side by side, pinned to the right edge, each on the timeframe you choose — read the day, the week and the month at a glance.',
+    about: 'SP Volume puts several right-pinned volume profiles next to each other without overlapping: the first against the right edge, the next to its left, and so on. Each one has its own timeframe (day, week or month, N periods back) and its own session, so you can keep the current day, the current week and the current month on screen at the same time, always on the right.',
+    points: ['Up to three profiles, side by side, pinned right', 'Each on its own timeframe: day / week / month, N back', 'Grey volume + blue / red delta, POC and value area', 'RTH, full session or overnight per profile'],
+    data: 'Tick-by-tick data with bid/ask side (bars fill in where ticks are missing).',
+  },
+  {
     slug: 'daily-market-info', name: 'Daily Market Info', tag: 'Levels', img: 'daily_market_info_full',
     blurb: 'Every session level that matters on one chart: opens, prior day/week/month, value areas, initial balance, VWAP bands and an economic calendar.',
     about: 'Daily Market Info puts the reference levels traders check every morning on one chart, session by session: opens, prior highs and lows, value areas, opening range and initial balance, VWAPs with bands, and the day\'s economic events filtered by impact.',

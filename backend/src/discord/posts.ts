@@ -43,6 +43,8 @@ const FOOTER = 'FXR Fluxora • Order flow for MotiveWave';
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
+  '2.9.10':
+    `🆕 **New study: SP Volume** — up to **3 volume profiles side by side, pinned to the right**, each on the timeframe you choose (day / week / month). 🔧 Also: profiles now anchor on the day separator (no more ~30 min bleed), and the per-day Volume Profile sits in its day with **Active Profile Position = In Place**.`,
   '2.9.9':
     `🔧 **TPO Profile**: poor vs excess is now counted the right way — up to a few lone letters at an extreme is a **poor** high / low, more than that is an **excess** (threshold adjustable). For a day-anchored profile, turn on **Auto-Fit Profile Width**.`,
   '2.9.8':

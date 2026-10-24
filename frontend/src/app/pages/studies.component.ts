@@ -10,7 +10,7 @@ import { RevealDirective, SpotDirective } from '../core/motion';
   template: `
     <section class="wrap section-tight" style="padding-top:64px">
       <span class="chip rise">The FXR Bundle</span>
-      <h1 class="rise" style="--d:80ms;margin-top:16px">Ten studies, <span class="grad">one tape</span></h1>
+      <h1 class="rise" style="--d:80ms;margin-top:16px">Eleven studies, <span class="grad">one tape</span></h1>
       <p class="lead rise" style="--d:160ms">Every study reads the same tick-by-tick data, so they agree with each other. Screenshots are rendered by MotiveWave on simulated data.</p>
       <div class="seg rise" style="--d:240ms;margin-top:10px">
         @for (t of tags; track t) {

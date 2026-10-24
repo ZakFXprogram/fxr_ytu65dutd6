@@ -20,7 +20,7 @@ import { FAQ } from './faq.data';
           <span class="l rise grad" style="--d:180ms">See size before</span>
           <span class="l rise" style="--d:280ms">the move.</span>
         </h1>
-        <p class="lead rise" style="--d:380ms">Ten studies built on every tick and on market-by-order data: big trades, who hit whom, stops and icebergs, delta, volume and TPO profiles and the levels that matter, right on your MotiveWave charts.</p>
+        <p class="lead rise" style="--d:380ms">Eleven studies built on every tick and on market-by-order data: big trades, who hit whom, stops and icebergs, delta, volume and TPO profiles and the levels that matter, right on your MotiveWave charts.</p>
         <div class="hero-cta rise" style="--d:460ms">
           <a class="btn btn-primary" routerLink="/pricing">Get the bundle <app-icon name="arrow" /></a>
           <a class="btn btn-ghost" routerLink="/studies">Explore the studies</a>
@@ -130,7 +130,7 @@ import { FAQ } from './faq.data';
     <section class="wrap section" style="padding-top:0">
       <div class="cta-band" fxrReveal>
         <h2>Put real order flow on your charts</h2>
-        <p>All ten studies, automatic updates and the Discord community, from 8 USDT a month.</p>
+        <p>All eleven studies, automatic updates and the Discord community, from 8 USDT a month.</p>
         <div class="row" style="justify-content:center">
           <a class="btn btn-primary" routerLink="/pricing">See pricing</a>
           <a class="btn btn-ghost" routerLink="/studies">Browse the studies</a>
