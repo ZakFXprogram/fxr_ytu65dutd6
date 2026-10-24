@@ -23,9 +23,17 @@ export type OrderStatus = 'pending' | 'confirming' | 'paid' | 'partially_paid' |
 export interface PayInfo { address: string; amount: string; network: string; token: string; contract: string; }
 export interface Order {
   id: string; plan: string; planLabel: string; amount: string; currency: string; status: OrderStatus;
+  promoCode: string | null; discountPct: number; fullPrice: string | null;
   createdAt: number; expiresAt: number; paidAt: number | null;
   pay: PayInfo | null; txid: string | null; received: string | null; canClaim: boolean;
 }
+export interface PromoQuote { plan: string; price: number; discountPct: number; newPrice: number; valid: boolean; kind?: 'promo' | 'affiliate'; code?: string; message?: string; }
+export interface AdminPromo {
+  id: string; code: string; percent: number; kind: 'promo' | 'affiliate'; affiliate_user: string | null;
+  status: 'active' | 'disabled'; max_uses: number; note: string | null; created_by: string; created_ms: number;
+  uses: number; pending: number; revenueUsdt: number;
+}
+export interface NewPromo { code?: string; percent: number; kind?: 'promo' | 'affiliate'; affiliateUser?: string; maxUses?: number; note?: string; }
 export interface Activity { at: number; kind: string; text: string; }
 export interface Account {
   licences: MyLicence[];

@@ -7,6 +7,7 @@ import { SessionService } from '../core/session.service';
 import { SiteService } from '../core/site.service';
 import { IconComponent } from '../core/icon.component';
 import { STUDIES } from '../core/studies';
+import { PromoQuote } from '../core/models';
 
 /** /buy/:plan — order summary and acceptance of the Terms and Risk disclosure, then the payment page. */
 @Component({
@@ -34,7 +35,12 @@ import { STUDIES } from '../core/studies';
             <div class="kv" style="margin-top:14px"><span class="mut">Access</span><span>{{ p.lifetime ? 'Lifetime' : p.days + ' days, added to any time you have left' }}</span></div>
             <div class="kv"><span class="mut">Account</span><span>{{ session.user()?.name }} (Discord)</span></div>
             <div class="kv"><span class="mut">Payment</span><span>USDT on TRON (TRC20), straight to us</span></div>
-            <div class="kv"><span class="mut">Total</span><b class="disp num" style="font-size:22px">{{ p.price }} USDT</b></div>
+            @if (applied(); as q) {
+              <div class="kv"><span class="mut">Promo {{ q.code }} {{ q.kind === 'affiliate' ? '(affiliate)' : '' }}</span><span style="color:#2ecc71">−{{ q.discountPct }}%</span></div>
+              <div class="kv"><span class="mut">Total</span><b class="disp num" style="font-size:22px"><s class="mut" style="font-size:15px;margin-right:8px">{{ p.price }}</s>{{ q.newPrice }} USDT</b></div>
+            } @else {
+              <div class="kv"><span class="mut">Total</span><b class="disp num" style="font-size:22px">{{ p.price }} USDT</b></div>
+            }
             <ul class="checks" style="margin-top:18px">
               <li>Licence and Discord role activate automatically once the payment is confirmed</li>
               <li>Install link and guide in the members' channel on Discord</li>
@@ -44,6 +50,13 @@ import { STUDIES } from '../core/studies';
 
           <div class="card bundle rise" style="--d:160ms">
             <h3>Before you pay</h3>
+            <label for="promo" style="font-size:13px;color:var(--mut)">Promo or affiliate code (optional)</label>
+            <div class="row" style="flex-wrap:nowrap;gap:8px;margin:4px 0 14px">
+              <input id="promo" [(ngModel)]="code" (ngModelChange)="onCodeChange()" placeholder="e.g. BLACK20" maxlength="24"
+                     style="text-transform:uppercase;flex:1;min-width:0" [disabled]="busy()" />
+              <button class="btn btn-ghost btn-sm" [disabled]="checking() || !code.trim()" (click)="applyCode(p.id)">{{ checking() ? '…' : 'Apply' }}</button>
+            </div>
+            @if (promoMsg()) { <p class="small" [style.color]="applied() ? '#2ecc71' : 'var(--err, #e74c3c)'" style="margin:-6px 0 12px">{{ promoMsg() }}</p> }
             <label class="row" style="flex-wrap:nowrap;align-items:flex-start;gap:10px;font-weight:500;color:var(--text);font-size:14.5px;cursor:pointer">
               <input type="checkbox" id="accept-terms" [(ngModel)]="accepted" style="margin-top:3px" />
               <span>I have read and accept the <a routerLink="/legal/terms" target="_blank">Terms of Service</a>, the <a routerLink="/legal/refunds" target="_blank">Refund policy</a> and the <a routerLink="/legal/risk" target="_blank">Risk disclosure</a>. I understand the studies are analysis tools, not investment advice, and that trading involves a substantial risk of loss.</span>
@@ -74,11 +87,35 @@ export class BuyComponent {
   accepted = false;
   busy = signal(false);
   error = signal('');
+  code = '';
+  checking = signal(false);
+  applied = signal<PromoQuote | null>(null);
+  promoMsg = signal('');
+
+  onCodeChange(): void {
+    // a changed code must be re-applied before it counts
+    if (this.applied()) { this.applied.set(null); this.promoMsg.set(''); }
+  }
+
+  applyCode(planId: string): void {
+    const code = this.code.trim();
+    if (!code) return;
+    this.checking.set(true);
+    this.promoMsg.set('');
+    this.api.checkPromo(planId, code).subscribe({
+      next: (q) => {
+        this.checking.set(false);
+        if (q.valid) { this.applied.set(q); this.promoMsg.set(`Code applied: −${q.discountPct}% → ${q.newPrice} USDT.`); }
+        else { this.applied.set(null); this.promoMsg.set(q.message || 'This promo code is not valid.'); }
+      },
+      error: (e: HttpErrorResponse) => { this.checking.set(false); this.applied.set(null); this.promoMsg.set(apiError(e, 'Could not check this code.')); },
+    });
+  }
 
   pay(planId: string): void {
     this.busy.set(true);
     this.error.set('');
-    this.api.createOrder(planId, true).subscribe({
+    this.api.createOrder(planId, true, this.applied() ? this.code.trim() : undefined).subscribe({
       next: (o) => void this.router.navigate(['/checkout', o.id]),
       error: (e: HttpErrorResponse) => {
         this.busy.set(false);

@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   HttpException,
   HttpStatus,
@@ -16,6 +17,7 @@ import { CONFIG, type AppConfig } from '../config';
 import { DbService, newId } from '../db/db.service';
 import { LicencesService } from '../licences/licences.service';
 import { RoleSyncService } from '../roles/role-sync.service';
+import { PromosService } from '../promos/promos.service';
 import { TronClient } from '../payments/tron.client';
 import { TXID, USDT_CONTRACT, fromMicro, toMicro } from '../payments/tron';
 
@@ -42,6 +44,10 @@ export interface OrderRow {
   paid_micro: number | null;
   payer: string | null;
   paid_tx_ms: number | null;
+  promo_id: string | null;
+  promo_code: string | null;
+  discount_pct: number | null;
+  base_full_micro: number | null;
 }
 
 export interface TransferRow {
@@ -121,6 +127,7 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
     private readonly licences: LicencesService,
     private readonly tron: TronClient,
     private readonly roles: RoleSyncService,
+    private readonly promos: PromosService,
     @Inject(CONFIG) private readonly cfg: AppConfig,
   ) {
     const dev = Number(process.env['TRON_POLL_MS']);
@@ -184,17 +191,29 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
 
   // ---------- opening an order
 
-  create(userId: string, planId: string): OrderRow {
+  create(userId: string, planId: string, promoCode?: string): OrderRow {
     const plan = this.licences.plan(planId);
     if (!plan) throw new NotFoundException('Unknown plan');
     if (!this.tron.configured) throw new ServiceUnavailableException('Checkout is not open yet. Please try again later.');
     this.sweep();
     const now = Date.now();
 
-    // clicking "Buy" twice reuses the open order while it has time left
+    // resolve a promo code, if any (a bad code is reported rather than silently ignored)
+    let promoId: string | null = null;
+    let pct = 0;
+    let promoNorm: string | null = null;
+    if (promoCode && promoCode.trim()) {
+      const r = this.promos.usable(promoCode);
+      if ('error' in r) throw new BadRequestException(r.error);
+      promoId = r.promo.id;
+      pct = r.promo.percent;
+      promoNorm = r.promo.code;
+    }
+
+    // clicking "Buy" twice reuses the open order while it has time left (same plan AND same promo)
     const same = this.db.get<OrderRow>(
-      'SELECT * FROM orders WHERE user_id = ? AND plan = ? AND status = ? AND expires_ms > ? ORDER BY created_ms DESC LIMIT 1',
-      userId, planId, ORDER_PENDING, now + 10 * MINUTE,
+      "SELECT * FROM orders WHERE user_id = ? AND plan = ? AND status = ? AND expires_ms > ? AND IFNULL(promo_id,'') = ? ORDER BY created_ms DESC LIMIT 1",
+      userId, planId, ORDER_PENDING, now + 10 * MINUTE, promoId ?? '',
     );
     if (same) return same;
 
@@ -205,18 +224,38 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       throw new HttpException('You already have payments in progress. Finish or cancel one first.', HttpStatus.TOO_MANY_REQUESTS);
     }
 
+    // discounted price, rounded to the cent (never below 0.01); the unique decimals are added on top
+    const full = toMicro(plan.price);
+    const base = pct ? Math.max(10_000, Math.round((full * (100 - pct)) / 100 / 10_000) * 10_000) : full;
+
     // no await between choosing the amount and saving it: two buyers can never get the same one
-    const base = toMicro(plan.price);
     const amount = this.pickAmount(base);
     const id = newId();
     this.db.run(
-      `INSERT INTO orders(id,user_id,plan,amount,pay_to,status,created_ms,expires_ms,updated_ms,terms_ms,base_micro,amount_micro)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
-      id, userId, planId, plan.price.toFixed(2), this.tron.address, ORDER_PENDING, now, now + this.windowMs, now, now, base, amount,
+      `INSERT INTO orders(id,user_id,plan,amount,pay_to,status,created_ms,expires_ms,updated_ms,terms_ms,base_micro,amount_micro,promo_id,promo_code,discount_pct,base_full_micro)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      id, userId, planId, fromMicro(base, 2), this.tron.address, ORDER_PENDING, now, now + this.windowMs, now, now, base, amount,
+      promoId, promoNorm, pct || null, pct ? full : null,
     );
-    this.db.logEvent('order', `Order ${ID8(id)} opened: ${plan.label}, ${fromMicro(amount, 4)} USDT`, userId);
+    this.db.logEvent('order',
+      `Order ${ID8(id)} opened: ${plan.label}, ${fromMicro(amount, 4)} USDT${promoNorm ? ` (promo ${promoNorm} -${pct}%)` : ''}`, userId);
     this.kick();
     return this.byId(id)!;
+  }
+
+  /** Price for a plan with an optional promo applied — for the checkout page to show before paying. */
+  quote(planId: string, promoCode?: string): {
+    plan: string; price: number; discountPct: number; newPrice: number; valid: boolean; kind?: string; code?: string; message?: string;
+  } {
+    const plan = this.licences.plan(planId);
+    if (!plan) throw new NotFoundException('Unknown plan');
+    const base = { plan: planId, price: plan.price, discountPct: 0, newPrice: plan.price, valid: false };
+    if (!promoCode || !promoCode.trim()) return base;
+    const r = this.promos.usable(promoCode);
+    if ('error' in r) return { ...base, message: r.error };
+    const pct = r.promo.percent;
+    const micro = Math.max(10_000, Math.round((toMicro(plan.price) * (100 - pct)) / 100 / 10_000) * 10_000);
+    return { plan: planId, price: plan.price, discountPct: pct, newPrice: Number(fromMicro(micro, 2)), valid: true, kind: r.promo.kind, code: r.promo.code };
   }
 
   /** Price + n x 0.0001 USDT, n random among the values no recent unpaid order holds (1-99, then up to 999). */
@@ -656,6 +695,9 @@ export class OrdersService implements OnModuleInit, OnModuleDestroy {
       planLabel: this.licences.plan(o.plan)?.label ?? o.plan,
       amount: o.amount,
       currency: 'USDT',
+      promoCode: o.promo_code ?? null,
+      discountPct: o.discount_pct ?? 0,
+      fullPrice: o.base_full_micro ? fromMicro(o.base_full_micro, 2) : null,
       status: o.status,
       createdAt: o.created_ms,
       expiresAt: o.expires_ms,

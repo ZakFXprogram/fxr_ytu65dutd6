@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpErrorResponse, HttpParams } from '@angular/common/http';
 import { Observable, map } from 'rxjs';
 import {
-  Account, AdminCode, AdminEvent, AdminLicence, AdminMember, AdminOrder, AdminTransfer, ListQuery, Me, MemberDetail, Order, Overview,
+  Account, AdminCode, AdminEvent, AdminLicence, AdminMember, AdminOrder, AdminPromo, AdminTransfer, ListQuery, Me, MemberDetail, NewPromo, Order, Overview, PromoQuote,
   Page, Session, SiteInfo,
 } from './models';
 import { PANEL_PATH } from './panel';
@@ -35,7 +35,8 @@ export class ApiService {
   sessions(): Observable<Session[]> { return this.http.get<Session[]>('/api/account/sessions'); }
   revokeSession(id: string): Observable<Ok> { return this.http.post<Ok>('/api/account/sessions/revoke', { id }); }
   revokeOtherSessions(): Observable<{ ok: boolean; ended: number }> { return this.http.post<{ ok: boolean; ended: number }>('/api/account/sessions/revoke-others', {}); }
-  createOrder(plan: string, acceptTerms: boolean): Observable<Order> { return this.http.post<Order>('/api/orders', { plan, acceptTerms }); }
+  createOrder(plan: string, acceptTerms: boolean, promo?: string): Observable<Order> { return this.http.post<Order>('/api/orders', { plan, acceptTerms, promo }); }
+  checkPromo(plan: string, code: string): Observable<PromoQuote> { return this.http.post<PromoQuote>('/api/promo/check', { plan, code }); }
   order(id: string): Observable<Order> { return this.http.get<Order>(`/api/orders/${id}`); }
   cancelOrder(id: string): Observable<Order> { return this.http.post<Order>(`/api/orders/${id}/cancel`, {}); }
   claimTx(id: string, txid: string): Observable<Order> { return this.http.post<Order>(`/api/orders/${id}/txid`, { txid }); }
@@ -76,6 +77,9 @@ export class ApiService {
     return this.http.post<{ codes: string[] }>(this.p('codes/generate'), { plan, count, batch });
   }
   disableCodes(ids: string[]): Observable<Done> { return this.http.post<Done>(this.p('codes/disable'), { ids }); }
+  promos(): Observable<{ items: AdminPromo[] }> { return this.http.get<{ items: AdminPromo[] }>(this.p('promos')); }
+  createPromo(dto: NewPromo): Observable<AdminPromo> { return this.http.post<AdminPromo>(this.p('promos/create'), dto); }
+  setPromo(id: string, disabled: boolean): Observable<{ ok: boolean }> { return this.http.post<{ ok: boolean }>(this.p('promos/' + (disabled ? 'disable' : 'enable')), { id }); }
   events(q: ListQuery): Observable<Page<AdminEvent>> { return this.http.get<Page<AdminEvent>>(this.p('events'), { params: this.params(q) }); }
 
   // ----- Discord bot (manager migration)

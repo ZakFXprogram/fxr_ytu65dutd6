@@ -250,6 +250,23 @@ check('bob redeems (case-insensitive)', r.status_code == 201 and r.json()['days'
 r = alice.post(f'{B}/api/account/redeem', json={'code': g['codes'][0]}, headers=O)
 check('used key refused', r.status_code == 404, r.status_code)
 
+print('promo codes')
+pr = owner.post(f'{A}/promos/create', json={'percent': 25, 'kind': 'promo', 'code': 'black25'}, headers=O).json()
+check('promo created (normalised upper-case)', pr.get('code') == 'BLACK25' and pr['percent'] == 25, pr)
+q = requests.post(f'{B}/api/promo/check', json={'plan': 'month1', 'code': 'black25'}, headers=O).json()
+check('promo check returns discounted price', q['valid'] and q['discountPct'] == 25 and q['newPrice'] == 6.0, q)
+check('unknown promo is invalid', requests.post(f'{B}/api/promo/check', json={'plan': 'month1', 'code': 'nope'}, headers=O).json()['valid'] is False)
+po = owner.post(f'{B}/api/orders', json={'plan': 'month1', 'acceptTerms': True, 'promo': 'black25'}, headers=O).json()
+check('order price discounted 25% (8.00 -> 6.00)', po['amount'] == '6.00' and po['discountPct'] == 25 and po['promoCode'] == 'BLACK25', po)
+check('discounted amount keeps unique decimals', bool(re.fullmatch(r'6\.00\d\d', po['pay']['amount'])) and 6_000_100 <= micro(po['pay']['amount']) <= 6_009_900, po.get('pay'))
+check('bad promo refused at checkout', owner.post(f'{B}/api/orders', json={'plan': 'month1', 'acceptTerms': True, 'promo': 'ZZZZ'}, headers=O).status_code == 400)
+owner.post(f'{B}/api/orders/{po["id"]}/cancel', headers=O)
+pl = owner.get(f'{A}/promos').json()['items']
+row = next((x for x in pl if x['code'] == 'BLACK25'), None)
+check('promo listed with a use count', row is not None and row['uses'] == 0 and row['pending'] == 0, row)
+owner.post(f'{A}/promos/disable', json={'id': row['id']}, headers=O)
+check('disabled promo rejected at checkout', owner.post(f'{B}/api/orders', json={'plan': 'month1', 'acceptTerms': True, 'promo': 'black25'}, headers=O).status_code == 400)
+
 print('sessions')
 alice2 = login('alice', ua='Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 Version/17.0 Mobile/15E148 Safari/604.1')
 ss = alice2.get(f'{B}/api/account/sessions').json()

@@ -18,6 +18,8 @@ import { OrdersController, PaymentsController } from './orders/orders.controller
 import { TronClient } from './payments/tron.client';
 import { RoleSyncService } from './roles/role-sync.service';
 import { CodesService } from './codes/codes.service';
+import { PromosService } from './promos/promos.service';
+import { PromoController } from './promos/promos.controller';
 import { AdminService } from './admin/admin.service';
 import { AdminController } from './admin/admin.controller';
 import { BotService } from './discord/bot.service';
@@ -44,6 +46,7 @@ import { LoaderSessionService } from './loader/loader-session.service';
     AccountController,
     OrdersController,
     PaymentsController,
+    PromoController,
     LoaderController,
     AdminController,
     InteractionsController,
@@ -57,6 +60,7 @@ import { LoaderSessionService } from './loader/loader-session.service';
     TronClient,
     RoleSyncService,
     CodesService,
+    PromosService,
     AdminService,
     BotService,
     InteractionsService,

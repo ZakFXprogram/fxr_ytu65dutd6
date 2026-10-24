@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Header, NotFoundException, Param, Post, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
-import { Equals, IsBoolean, IsString, Length, Matches } from 'class-validator';
+import { Equals, IsBoolean, IsOptional, IsString, Length, Matches } from 'class-validator';
 import { toString as qrSvg } from 'qrcode';
 import { CurrentAuth, UserGuard } from '../auth/guards';
 import type { AuthContext } from '../auth/auth.service';
@@ -12,6 +12,8 @@ class CreateOrderDto {
   @IsString() @Length(1, 32) @Matches(/^[a-z0-9]+$/) plan!: string;
   /** The buyer ticked "I accept the Terms and the Risk disclosure (not investment advice)". */
   @IsBoolean() @Equals(true, { message: 'Please accept the Terms and the Risk disclosure to continue.' }) acceptTerms!: boolean;
+  /** Optional promo / affiliate code. */
+  @IsOptional() @IsString() @Length(0, 24) @Matches(/^[A-Za-z0-9-]*$/, { message: 'A promo code uses only letters, digits and dashes.' }) promo?: string;
 }
 
 class ClaimDto {
@@ -27,7 +29,7 @@ export class OrdersController {
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post()
   create(@CurrentAuth() a: AuthContext, @Body() dto: CreateOrderDto) {
-    return this.orders.view(this.orders.create(a.user.id, dto.plan));
+    return this.orders.view(this.orders.create(a.user.id, dto.plan, dto.promo));
   }
 
   @Get(':id')

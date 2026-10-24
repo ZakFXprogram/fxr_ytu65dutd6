@@ -174,6 +174,29 @@ export class DbService implements OnModuleInit, OnModuleDestroy {
     `);
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_events_user ON events(user_id)');
     this.db.exec('CREATE INDEX IF NOT EXISTS idx_orders_created ON orders(created_ms)');
+
+    // Promo / affiliate codes: a percentage off the price at checkout, reusable, with a use count.
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS promos (
+        id TEXT PRIMARY KEY,
+        code TEXT NOT NULL UNIQUE,          -- normalised (upper-case), what the buyer types
+        percent INTEGER NOT NULL,           -- 1..90 off the plan price
+        kind TEXT NOT NULL DEFAULT 'promo', -- promo | affiliate
+        affiliate_user TEXT,                -- Discord id of the affiliate (kind = affiliate)
+        status TEXT NOT NULL DEFAULT 'active', -- active | disabled
+        max_uses INTEGER NOT NULL DEFAULT 0,   -- 0 = unlimited (counts paid orders)
+        note TEXT,
+        created_by TEXT NOT NULL,
+        created_ms INTEGER NOT NULL
+      );
+      CREATE INDEX IF NOT EXISTS idx_promos_status ON promos(status);
+    `);
+    // an order can carry the promo it used
+    this.addColumn('orders', 'promo_id', 'TEXT');
+    this.addColumn('orders', 'promo_code', 'TEXT');
+    this.addColumn('orders', 'discount_pct', 'INTEGER');
+    this.addColumn('orders', 'base_full_micro', 'INTEGER'); // price before the discount (micro-USDT)
+    this.db.exec('CREATE INDEX IF NOT EXISTS idx_orders_promo ON orders(promo_id)');
   }
 
   private addColumn(table: string, column: string, type: string): void {

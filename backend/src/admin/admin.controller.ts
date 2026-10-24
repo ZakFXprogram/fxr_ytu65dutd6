@@ -8,6 +8,7 @@ import { AuthService, type AuthContext } from '../auth/auth.service';
 import { LicencesService } from '../licences/licences.service';
 import { OrdersService } from '../orders/orders.service';
 import { CodesService } from '../codes/codes.service';
+import { PromosService } from '../promos/promos.service';
 import { RoleSyncService } from '../roles/role-sync.service';
 import { AdminService } from './admin.service';
 import { DbService } from '../db/db.service';
@@ -67,6 +68,14 @@ class GenerateDto {
   @IsOptional() @IsString() @Matches(/^[\w .-]{0,40}$/) batch?: string;
   @IsOptional() @IsInt() @Min(1) @Max(3650) days?: number;
 }
+class CreatePromoDto {
+  @IsOptional() @IsString() @Length(0, 24) @Matches(/^[A-Za-z0-9-]*$/) code?: string;
+  @IsInt() @Min(1) @Max(90) percent!: number;
+  @IsOptional() @IsString() @Matches(/^(promo|affiliate)$/) kind?: string;
+  @IsOptional() @IsString() @Matches(DISCORD_ID, { message: 'Enter a Discord user id (17-20 digits).' }) affiliateUser?: string;
+  @IsOptional() @IsInt() @Min(0) @Max(100000) maxUses?: number;
+  @IsOptional() @IsString() @Length(0, 200) note?: string;
+}
 
 /**
  * The owner's panel API. Mounted internally at /api/admin, but that prefix is refused from outside: the browser
@@ -83,6 +92,7 @@ export class AdminController {
     private readonly licences: LicencesService,
     private readonly orders: OrdersService,
     private readonly codes: CodesService,
+    private readonly promos: PromosService,
     private readonly roles: RoleSyncService,
     private readonly db: DbService,
   ) {}
@@ -230,6 +240,30 @@ export class AdminController {
   @Post('codes/disable')
   disable(@CurrentAuth() a: AuthContext, @Body() dto: IdsDto) {
     return { done: this.codes.disable(dto.ids, a.user.id) };
+  }
+
+  // ----- promo / affiliate codes
+  @Get('promos')
+  listPromos() {
+    return { items: this.promos.list() };
+  }
+
+  @Post('promos/create')
+  createPromo(@CurrentAuth() a: AuthContext, @Body() dto: CreatePromoDto) {
+    return this.promos.create(
+      { code: dto.code, percent: dto.percent, kind: dto.kind as 'promo' | 'affiliate' | undefined, affiliateUser: dto.affiliateUser, maxUses: dto.maxUses, note: dto.note },
+      a.user.id,
+    );
+  }
+
+  @Post('promos/disable')
+  disablePromo(@CurrentAuth() a: AuthContext, @Body() dto: IdDto) {
+    return { ok: this.promos.setStatus(dto.id, 'disabled', a.user.id) };
+  }
+
+  @Post('promos/enable')
+  enablePromo(@CurrentAuth() a: AuthContext, @Body() dto: IdDto) {
+    return { ok: this.promos.setStatus(dto.id, 'active', a.user.id) };
   }
 
   // ----- activity
