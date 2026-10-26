@@ -43,6 +43,8 @@ const FOOTER = 'FXR Fluxora • Order flow for MotiveWave';
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
+  '2.9.12':
+    `🔧 **TPO Profile** now anchors to the full day by default (separator to separator), like the Volume Profile, and stays anchored when you zoom the time axis. Turn it off with **Anchor to Full Day / Week** for a fixed-width profile.`,
   '2.9.11':
     `🆕 **Volume Profile**: right-click a profile to **Split** it at that point, **Merge** it with the previous / next profile, or **Reset**. Your manual splits are kept with the study. (The same is coming to TPO next.)`,
   '2.9.10':
