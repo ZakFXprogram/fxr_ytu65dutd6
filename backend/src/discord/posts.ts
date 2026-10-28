@@ -43,6 +43,8 @@ const FOOTER = 'FXR Fluxora • Order flow for MotiveWave';
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
+  '2.9.13':
+    `⚡ **Volume Profile**: fixed the memory blow-up that could crash MotiveWave — per-bar histograms are now kept only when you actually use split / merge (or Visible Range), not on every profile. A right-click split reloads once to enable them.`,
   '2.9.12':
     `🔧 **TPO Profile** now anchors to the full day by default (separator to separator), like the Volume Profile, and stays anchored when you zoom the time axis. Turn it off with **Anchor to Full Day / Week** for a fixed-width profile.`,
   '2.9.11':
