@@ -43,6 +43,8 @@ const FOOTER = 'FXR Fluxora • Order flow for MotiveWave';
 
 /** What changed in each jar version, shown in its release message (versions without notes show none). */
 export const RELEASE_NOTES: Record<string, string> = {
+  '2.9.14':
+    `🆕 **Volume Profile & SP Volume**: new **intraday timeframes** — 1H, 2H, 3H, 4H, 6H, 8H, 12H — on top of day / week / month. A new **Periods back (0 = current)** setting picks *which* period, while **Periods (count)** sets how many (merged in Composite, shown side by side in Split). 🔧 **SP Volume** fixed: each column now shows **one** period at its "periods back" (1 = current) instead of merging several, so it no longer pulls in out-of-range data.`,
   '2.9.13':
     `⚡ **Volume Profile**: fixed the memory blow-up that could crash MotiveWave — per-bar histograms are now kept only when you actually use split / merge (or Visible Range), not on every profile. A right-click split reloads once to enable them.`,
   '2.9.12':
